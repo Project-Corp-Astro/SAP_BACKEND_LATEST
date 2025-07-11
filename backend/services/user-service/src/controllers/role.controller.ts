@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
+import { Types } from 'mongoose';
 import RolePermissionModel from '../models/RolePermission.model';
+import { PermissionService } from '../services/PermissionService';
 import UserModel from '../../../../models/mongodb/User.model';
-import { BadRequestError, NotFoundError } from '../../../../src/scripts/utils/errors';
+import { BadRequestError, NotFoundError, UnauthorizedError } from '../../../../src/scripts/utils/errors';
 
 interface ValidationError {
   param: string;
@@ -150,24 +152,23 @@ export const RoleController = {
       data: roles
     });
   },
-
-  /**
-   * Get role details
-   */
-  async getRole(req: Request, res: Response) {
-    const { roleId } = req.params;
-    const role = await RolePermissionModel.findById(roleId);
-
-    if (!role) {
-      throw new NotFoundError('Role not found');
+  //get roles for multiple/single rolePermissionIds
+  async getRoles(req: Request, res: Response) {
+    const { rolePermissionIds } = req.body;
+  
+    if (!Array.isArray(rolePermissionIds) || rolePermissionIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'rolePermissionIds must be a non-empty array' });
     }
-
-    res.json({
-      success: true,
-      data: role
-    });
+  
+    const roles = await RolePermissionModel.find({ _id: { $in: rolePermissionIds } });
+  
+    if (!roles || roles.length === 0) {
+      return res.status(404).json({ success: false, message: 'No roles found' });
+    }
+  
+    res.json({ success: true, data: roles });
   },
-
+  
   /**
    * Delete role
    */
@@ -192,5 +193,64 @@ export const RoleController = {
       success: true,
       message: 'Role deleted successfully'
     });
+  },
+
+  /**
+   * Check if current user has a specific permission
+   */
+  async checkPermission(req: Request, res: Response) {
+    try {
+      const { permission, application = '*' } = req.body;
+      
+      if (!req.user?._id) {
+        throw new UnauthorizedError('User not authenticated');
+      }
+  
+      const userId = typeof req.user._id === 'string'
+        ? new Types.ObjectId(req.user._id)
+        : req.user._id;
+  
+      const hasPermission = await PermissionService.hasPermission(
+        userId,
+        permission,
+        application,
+        req.user.rolePermissionIds
+      );
+  
+      res.status(200).json({
+        success: true,
+        data: {
+          hasPermission,
+        }
+      });
+    } catch (error) {
+      console.error('Error checking permission:', {
+        error: error.message,
+        stack: error.stack
+      });
+  
+      const status = error.statusCode || 500;
+      res.status(status).json({
+        success: false,
+        message: error.message || 'Error checking permission'
+      });
+    }
+  }
+};
+
+export const getUserRolePermissions = async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'Missing userId parameter' });
+    }
+
+    const rolePermissions = await PermissionService.getUserRolePermissions(userId);
+
+    return res.status(200).json({ success: true, data: rolePermissions });
+  } catch (error) {
+    console.error('Error fetching user role permissions:', error);
+    return res.status(500).json({ success: false, error: 'Internal server error' });
   }
 };

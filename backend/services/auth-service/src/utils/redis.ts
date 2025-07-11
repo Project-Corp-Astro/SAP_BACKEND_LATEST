@@ -4,7 +4,6 @@ import {
   RedisCache,
   createServiceRedisClient,
   SERVICE_DB_MAPPING,
-  RedisOptions
 } from '../../../../shared/utils/redis-manager';
 import type { Redis as IORedis } from 'ioredis';
 
@@ -22,7 +21,7 @@ const redisClient: IORedis = createServiceRedisClient(SERVICE_NAME, {
   host: config.get('redis.host', 'localhost'),
   port: parseInt(config.get('redis.port', '6379')),
   password: config.get('redis.password', '') || undefined,
-  db: SERVICE_DB_MAPPING[SERVICE_NAME] || 1, // Fallback to DB 1 for auth service
+  db: SERVICE_DB_MAPPING[SERVICE_NAME] , // Fallback to DB 1 for auth service
 });
 
 // Log Redis database information

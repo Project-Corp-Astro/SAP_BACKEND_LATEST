@@ -396,96 +396,12 @@ class UserController {
     }
   }
 
-  // async updateUserPermissions(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
-  //   try {
-  //     const { userId } = req.params;
-  //     const { permissions } = req.body;
-
-  //     if (!Array.isArray(permissions)) {
-  //       return res.status(400).json({
-  //         success: false,
-  //         message: 'Permissions must be an array'
-  //       });
-  //     }
-
-  //     // @ts-ignore
-  //     const requesterId = req.user?._id;
-  //     // @ts-ignore
-  //     const requesterRole = req.user?.role;
-  //     // @ts-ignore
-  //     const requesterPermissions = req.user?.permissions || [];
-
-  //     if (requesterId !== userId && requesterRole !== UserRole.ADMIN && !requesterPermissions.includes('system.manage_roles')) {
-  //       return res.status(403).json({
-  //         success: false,
-  //         message: 'Not authorized to update permissions'
-  //       });
-  //     }
-
-  //     const user = await userService.updateUserPermissions(userId, permissions);
-
-  //     return res.status(200).json({
-  //       success: true,
-  //       message: 'Permissions updated successfully',
-  //       data: user.permissions
-  //     });
-  //   } catch (error) {
-  //     if ((error as Error).message === 'User not found') {
-  //       return res.status(404).json({
-  //         success: false,
-  //         message: 'User not found'
-  //       });
-  //     }
-  //     if ((error as Error).message.includes('Invalid permissions')) {
-  //       return res.status(400).json({
-  //         success: false,
-  //         message: (error as Error).message
-  //       });
-  //     }
-
-  //     serviceLogger.error('Permissions update error:', { error: (error as Error).message });
-  //     return next(error);
-  //   }
-  // }
-
-  /**
-   * Get all available permissions
-   * @param req - Express request object
-   * @param res - Express response object
-   * @param next - Express next middleware function
-   */
-  // async getAllPermissions(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
-  //   try {
-  //     // @ts-ignore
-  //     const requesterRole = req.user?.role;
-  //     // @ts-ignore
-  //     const requesterPermissions = req.user?.permissions || [];
-
-  //     if (requesterRole !== UserRole.ADMIN && !requesterPermissions.includes('system.manage_roles')) {
-  //       return res.status(403).json({
-  //         success: false,
-  //         message: 'Not authorized to access permissions'
-  //       });
-  //     }
-
-  //     const permissions = await userService.getAllPermissions();
-
-  //     return res.status(200).json({
-  //       success: true,
-  //       message: 'Permissions retrieved successfully',
-  //       data: permissions
-  //     });
-  //   } catch (error) {
-  //     serviceLogger.error('Get permissions error:', { error: (error as Error).message });
-  //     return next(error);
-  //   }
-  // }
+ 
 }
 
 const userController = new UserController();
 
 export const {
-  // createUser,
   getUsers,
   getUserById,
   updateUser,
@@ -497,6 +413,4 @@ export const {
   getUserDevices,
   removeUserDevice,
   getUserActivity,
-  // updateUserPermissions,
-  // getAllPermissions
 } = userController;

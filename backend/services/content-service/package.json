@@ -26,7 +26,8 @@
     "mongoose": "^6.2.9",
     "morgan": "^1.10.0",
     "winston": "^3.6.0",
-    "winston-daily-rotate-file": "^4.7.1"
+    "winston-daily-rotate-file": "^4.7.1",
+    "@corp-astro/permission-client": "file:../../packages"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

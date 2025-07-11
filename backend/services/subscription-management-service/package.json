@@ -22,7 +22,9 @@
     "express": "^5.1.0",
     "helmet": "^8.1.0",
     "mongoose": "^8.15.1",
-    "supabase": "^2.24.3"
+    "supabase": "^2.24.3",
+    "@corp-astro/permission-client": "file:../../packages"
+   
   },
   "devDependencies": {
     "nodemon": "^3.0.1",

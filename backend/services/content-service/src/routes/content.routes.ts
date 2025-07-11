@@ -1,9 +1,11 @@
 import express, { Router, RequestHandler } from 'express';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import * as contentController from '../controllers/content.controller';
-import { requirePermission } from '../../../../src/middleware/requirePermission';
+import { requireRemotePermission } from '@corp-astro/permission-client';
 
 const router: Router = express.Router();
+
+
 
 router.use(authMiddleware as RequestHandler);
 /**
@@ -12,7 +14,11 @@ router.use(authMiddleware as RequestHandler);
  * @access Private (super_admin, content_manager)
  */
 router.get('/', 
-  requirePermission('content:read', { application: 'cms' }),
+  requireRemotePermission(
+    'content:read', 
+    { application: 'cms',
+        allowSuperadmin: true
+    }) as RequestHandler,
   contentController.getAllContent as RequestHandler);
 
 /**
@@ -22,7 +28,11 @@ router.get('/',
  */
 router.post(
   '/',
-  requirePermission('content:create', { application: 'cms' }),
+  requireRemotePermission(
+    'content:create', 
+    { application: 'cms',
+        allowSuperadmin: true
+    }) as RequestHandler,
   contentController.createContent as RequestHandler,
 );
 
@@ -32,7 +42,11 @@ router.post(
  * @access Public
  */
 router.get('/articles', 
-  requirePermission('content:read', { application: 'cms' }),
+  requireRemotePermission(
+    'content:read', 
+    { application: 'cms',
+        allowSuperadmin: true
+    }) as RequestHandler,
   contentController.getArticles as RequestHandler);
 
 /**
@@ -41,7 +55,11 @@ router.get('/articles',
  * @access Public
  */
 router.get('/categories',
-  requirePermission('content:read', { application: 'cms' }),
+  requireRemotePermission(
+    'content:read', 
+    { application: 'cms',
+        allowSuperadmin: true
+    }) as RequestHandler,
   contentController.getAllCategories as RequestHandler);
 
 /**
@@ -50,7 +68,11 @@ router.get('/categories',
  * @access Public
  */
 router.get('/slug/:slug', 
-  requirePermission('content:read', { application: 'cms' }),
+  requireRemotePermission(
+    'content:read', 
+    { application: 'cms',
+        allowSuperadmin: true
+    }) as RequestHandler,
   contentController.getContentBySlug as RequestHandler);
 
 /**
@@ -58,7 +80,13 @@ router.get('/slug/:slug',
  * @desc Get content by ID
  * @access Public
  */
-router.get('/:contentId', contentController.getContentById as RequestHandler);
+router.get('/:contentId', 
+  requireRemotePermission(
+    'content:read', 
+    { application: 'cms',
+        allowSuperadmin: true
+    }) as RequestHandler,
+contentController.getContentById as RequestHandler);
 
 /**
  * @route PUT /api/content/:contentId
@@ -67,7 +95,11 @@ router.get('/:contentId', contentController.getContentById as RequestHandler);
  */
 router.put(
   '/:contentId',
-  requirePermission('content:update', { application: 'cms' }),
+  requireRemotePermission(
+    'content:update', 
+    { application: 'cms',
+        allowSuperadmin: true
+    }) as RequestHandler,
   contentController.updateContent as RequestHandler,
 );
 
@@ -78,7 +110,11 @@ router.put(
  */
 router.delete(
   '/:contentId',
-  requirePermission('content:delete', { application: 'cms' }),
+  requireRemotePermission(
+    'content:delete', 
+    { application: 'cms',
+        allowSuperadmin: true
+    }) as RequestHandler,
   contentController.deleteContent as RequestHandler,
 );
 
@@ -89,7 +125,11 @@ router.delete(
  */
 router.patch(
   '/:contentId/status',
-  requirePermission('content:update', { application: 'cms' }),
+  requireRemotePermission(
+    'content:update', 
+    { application: 'cms',
+        allowSuperadmin: true
+    }) as RequestHandler,
   contentController.updateContentStatus as RequestHandler,
 );
 
@@ -100,7 +140,11 @@ router.patch(
  */
 router.post(
   '/categories',
-  requirePermission('content:create', { application: 'cms' }),
+  requireRemotePermission(
+    'content:create', 
+    { application: 'cms',
+        allowSuperadmin: true
+    }) as RequestHandler,
   contentController.createCategory as RequestHandler,
 );
 

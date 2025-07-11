@@ -6,6 +6,7 @@
 import Redis from 'ioredis';
 import { createServiceLogger } from './logger';
 import config from '../config/index';
+import { Document, Types } from 'mongoose';
 
 // Initialize logger
 const logger = createServiceLogger('redis-manager');
@@ -159,6 +160,12 @@ export function createServiceRedisClient(
  * Provides a simple interface for cache operations
  */
 export class RedisCache {
+  getCachedRolePermission(id: string) {
+    throw new Error('Method not implemented.');
+  }
+  cacheRolePermission(arg0: any, role: Document<any, any, any> & { _id: Types.ObjectId; }): any {
+    throw new Error('Method not implemented.');
+  }
   private readonly client: Redis;
   private readonly serviceName: string;
   private readonly logger: any;

@@ -12,13 +12,9 @@ import '../types/auth-types';
 // Import user type converter
 import { convertToIUser } from '../utils/user-type-converter';
 // Import UserRole from shared types instead of local interfaces
-import { UserRole } from '@corp-astro/shared-types';
 import {
-  ExtendedUser,
   UserDocument,
   RegistrationRequest,
-  AuthResponse,
-  JwtPayload
 } from '../interfaces/shared-types';
 
 // Define a custom interface that doesn't extend Request to avoid type conflicts
@@ -42,9 +38,9 @@ export const register = async (req: Request, res: Response, next: NextFunction):
     const userData: RegistrationRequest = { username, email, password, firstName, lastName };
     // Use a proper type assertion with unknown first to avoid TypeScript error
     const authReq = req as unknown as AuthenticatedRequest;
-    if (role && authReq.user?.role === UserRole.ADMIN) {
-      (userData as any).role = role;
-    }
+    // if (role && authReq.user?.role === UserRole.ADMIN) {
+    //   (userData as any).role = role;
+    // }
     const user = await authService.register(userData);
     res.status(201).json({ success: true, message: 'User registered successfully', data: user });
   } catch (error: any) {

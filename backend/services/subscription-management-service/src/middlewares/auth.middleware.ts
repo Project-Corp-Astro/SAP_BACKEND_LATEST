@@ -71,8 +71,8 @@ export const authMiddleware = (
     };
 
     // Log the decoded token for debugging
-    logger.debug(`[${SERVICE_NAME}] Decoded JWT: ${JSON.stringify(payload, null, 2)}`);
-    logger.debug(`[${SERVICE_NAME}] Attached user to request: ${JSON.stringify(req.user)}`);
+    // logger.debug(`[${SERVICE_NAME}] Decoded JWT: ${JSON.stringify(payload, null, 2)}`);
+    // logger.debug(`[${SERVICE_NAME}] Attached user to request: ${JSON.stringify(req.user)}`);
 
     next();
   } catch (err) {

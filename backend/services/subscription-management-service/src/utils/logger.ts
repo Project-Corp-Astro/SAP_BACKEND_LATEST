@@ -103,17 +103,46 @@ const consoleTransport = new winston.transports.Console({
     })
   )
 });
+// Helper to safely stringify objects with circular references
+const safeStringify = (obj: any, indent = 2) => {
+  const cache = new Set();
+  return JSON.stringify(obj, (key, value) => {
+    if (typeof value === 'object' && value !== null) {
+      if (cache.has(value)) {
+        // Circular reference found, discard key
+        return '[Circular]';
+      }
+      // Store value in our set
+      cache.add(value);
+    }
+    return value;
+  }, indent);
+};
 
-// Create logger instance with debug level
 const logger = winston.createLogger({
-  level: 'debug', // Set the minimum log level
-  defaultMeta: { service: config.serviceName },
-  transports: [consoleTransport],
-  // Handle uncaught exceptions and rejections
-  handleExceptions: true,
-  handleRejections: true,
-  exitOnError: false
+  level: process.env.LOG_LEVEL || 'info',
+  format: winston.format.combine(
+    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    winston.format.errors({ stack: true }),
+    winston.format.splat(),
+    winston.format.json()
+  ),
+  defaultMeta: { service: 'subscription-service' },
+  transports: [
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize(),
+        winston.format.printf(({ level, message, timestamp, ...meta }) => {
+          const metaString = Object.keys(meta).length 
+            ? `\n${safeStringify(meta, 2)}` 
+            : '';
+          return `${timestamp} [${meta.service || 'app'}] ${level}: ${message}${metaString}`;
+        })
+      )
+    })
+  ]
 });
+
 
 // Log the current log level
 logger.info(`Logger initialized in ${config.env} mode with level: debug`);

@@ -1,6 +1,11 @@
 {
   "name": "backend",
   "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "services/*",
+    "packages/*"
+  ],
   "main": "server.js",
   "scripts": {
     "test": "jest --config=jest.config.js",
@@ -64,6 +69,7 @@
     "@types/nodemailer": "^6.4.17",
     "amqplib": "^0.10.3",
     "apollo-server-express": "^3.13.0",
+    "axios": "^1.10.0",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^2.4.3",
     "body-parser": "^2.2.0",

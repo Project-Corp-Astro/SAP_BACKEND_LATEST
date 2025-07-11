@@ -1,11 +1,10 @@
-import express from 'express';
+import express, { RequestHandler } from 'express';
 import { AdminSubscriptionController } from '../controllers/admin/subscription.controller';
 import adminSubscriptionPlanController from '../controllers/admin/subscription-plan.controller';
 import { AdminPromoCodeController } from '../controllers/admin/promo-code.controller';
 import promoCodeAnalyticsController from '../controllers/admin/promo-code-analytics.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
-import { requirePermission } from '../../../../src/middleware/requirePermission';
-
+import { requireRemotePermission } from '@corp-astro/permission-client';
 const router = express.Router();
 const adminSubscriptionController = new AdminSubscriptionController();
 const adminPromoCodeController = new AdminPromoCodeController();
@@ -15,96 +14,188 @@ router.use(authMiddleware);
 
 // Subscription routes
 router.get('/subscriptions',
-    requirePermission('subscription:read', { application: 'billing', }),
+    requireRemotePermission(
+        'subscription:read', {
+        application: "billing",
+        allowSuperadmin: true
+      }) as RequestHandler,
     adminSubscriptionController.getAllSubscriptions);
 
 router.get('/subscriptions/app/:appId',
-    requirePermission('subscription:read', { application: 'billing', }),
+    requireRemotePermission(
+        'subscription:read',
+        { application: 'billing',
+            allowSuperadmin: true
+        }) as RequestHandler,
     adminSubscriptionController.getSubscriptionsByApp);
 
 router.get('/subscriptions/user/:userId',
-    requirePermission('subscription:read', { application: 'billing', }),
+    requireRemotePermission(
+        'subscription:read',
+        { application: 'billing',
+            allowSuperadmin: true
+        }) as RequestHandler,
     adminSubscriptionController.getUserSubscriptions);
 
 router.post('/subscriptions',
-    requirePermission('subscription:create', { application: 'billing', }),
+    requireRemotePermission(
+        'subscription:create',
+        { application: 'billing',
+            allowSuperadmin: true
+        }) as RequestHandler,
     adminSubscriptionController.createSubscription);
 
 router.get('/subscriptions/:id',
-    requirePermission('subscription:read', { application: 'billing', }),    
+    requireRemotePermission(
+        'subscription:read',
+        { application: 'billing',
+            allowSuperadmin: true
+        }) as RequestHandler,
     adminSubscriptionController.getSubscriptionById);
 
 router.patch('/subscriptions/:id/status',
-    requirePermission('subscription:update', { application: 'billing', }),
+    requireRemotePermission(
+        'subscription:update',
+        { application: 'billing',
+            allowSuperadmin: true
+        }) as RequestHandler,
     adminSubscriptionController.updateSubscriptionStatus);
 
 router.post('/subscriptions/:id/renew',
-    requirePermission('subscription:update', { application: 'billing', }),
+    requireRemotePermission(
+        'subscription:upgrade',
+        { application: 'billing',
+            allowSuperadmin: true
+        }) as RequestHandler,
     adminSubscriptionController.renewSubscription);
 
 // Subscription plan routes
 router.get('/plans',
-    requirePermission('subscription:read', { application: 'billing', }),
+    requireRemotePermission(
+        'subscription:read',
+        { application: 'billing',
+            allowSuperadmin: true
+        }) as RequestHandler,
     adminSubscriptionPlanController.getAllPlans);
 
 router.get('/plans/:id',
-    requirePermission('subscription:read', { application: 'billing', }),
+    requireRemotePermission(
+        'subscription:read',
+        { application: 'billing',
+            allowSuperadmin: true
+        }) as RequestHandler,
     adminSubscriptionPlanController.getPlanById);
 
 router.post('/plans',
-    requirePermission('subscription:create', { application: 'billing', }),
+    requireRemotePermission(
+        'subscription:create',
+        { application: 'billing',
+            allowSuperadmin: true
+        }) as RequestHandler,
     adminSubscriptionPlanController.createPlan);
 
 router.put('/plans/:id',
-    requirePermission('subscription:update', { application: 'billing', }),
+    requireRemotePermission(
+        'subscription:update',
+        { application: 'billing',
+            allowSuperadmin: true
+        }) as RequestHandler,
     adminSubscriptionPlanController.updatePlan);
 
 router.delete('/plans/:id',
-    requirePermission('subscription:cancel', { application: 'billing', }),
+    requireRemotePermission(
+        'subscription:cancel',
+        { application: 'billing',
+            allowSuperadmin: true
+        }) as RequestHandler,
     adminSubscriptionPlanController.deletePlan);
 
 router.delete('/plans/:id/permanent',
-    requirePermission('subscription:cancel', { application: 'billing', }),
+    requireRemotePermission(
+        'subscription:cancel',
+        { application: 'billing',
+            allowSuperadmin: true
+        }) as RequestHandler,
     adminSubscriptionPlanController.hardDeletePlan);
 
 // Plan feature routes
 router.post('/plans/:planId/features',
-    requirePermission('subscription:create', { application: 'billing', }),
+    requireRemotePermission(
+        'subscription:create',
+        { application: 'billing',
+            allowSuperadmin: true
+        }) as RequestHandler,
     adminSubscriptionPlanController.addFeature);
 
 router.put('/features/:featureId',
-    requirePermission('subscription:update', { application: 'billing', }),
+    requireRemotePermission(
+        'subscription:update',
+        { application: 'billing',
+            allowSuperadmin: true
+        }) as RequestHandler,
     adminSubscriptionPlanController.updateFeature);
 
 router.delete('/features/:featureId',
-    requirePermission('subscription:cancel', { application: 'billing', }),
+    requireRemotePermission(
+        'subscription:cancel',
+        { application: 'billing',
+            allowSuperadmin: true
+        }) as RequestHandler,
     adminSubscriptionPlanController.deleteFeature);
 
 // Promo code analytics routes
 router.get('/promo-codes/analytics',
-    requirePermission('analytics:view', { application: 'billing', }),
+    requireRemotePermission(
+        'subscription:read',
+        { application: 'billing',
+            allowSuperadmin: true
+        }) as RequestHandler,
     promoCodeAnalyticsController.getAnalytics);
 
 // Promo code routes
 router.get('/promo-codes',
-    requirePermission('subscription:read', { application: 'billing', }),
+    requireRemotePermission(
+        'subscription:read',    
+        { application: 'billing',
+            allowSuperadmin: true
+        }) as RequestHandler,
     adminPromoCodeController.getAllPromoCodes);
 
 router.get('/promo-codes/:id',
-    requirePermission('subscription:read', { application: 'billing', }),
+    requireRemotePermission(
+        'subscription:read',    
+        { application: 'billing',
+            allowSuperadmin: true
+        }) as RequestHandler,
     adminPromoCodeController.getPromoCodeById);
 router.post('/promo-codes',
-    requirePermission('subscription:create', { application: 'billing', }),
+    requireRemotePermission(
+        'subscription:create',    
+        { application: 'billing',
+            allowSuperadmin: true
+        }) as RequestHandler,
     adminPromoCodeController.createPromoCode);
 router.put('/promo-codes/:id',
-    requirePermission('subscription:update', { application: 'billing', }),
+    requireRemotePermission(
+        'subscription:update',    
+        { application: 'billing',
+            allowSuperadmin: true
+        }) as RequestHandler,
     adminPromoCodeController.updatePromoCode);
 router.delete('/promo-codes/:id', 
-    requirePermission('subscription:cancel', { application: 'billing', }),
+    requireRemotePermission(
+        'subscription:cancel',    
+        { application: 'billing',
+            allowSuperadmin: true
+        }) as RequestHandler,
     adminPromoCodeController.deletePromoCode);
 
 router.get('/apps/dropdown',
-    requirePermission('subscription:read', { application: 'billing', }),
+    requireRemotePermission(
+        'subscription:read',    
+        { application: 'billing',
+            allowSuperadmin: true
+        }) as RequestHandler,
     adminSubscriptionPlanController.getAppsForDropdown);
 
 export default router;

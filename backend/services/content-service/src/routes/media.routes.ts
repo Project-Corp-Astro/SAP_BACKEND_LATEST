@@ -4,12 +4,16 @@ import mediaController from '../controllers/media.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import { MediaType, VideoProvider } from '../interfaces/media.interfaces';
 import { ContentStatus } from '../interfaces/content.interfaces';
-import { requirePermission } from '../../../../src/middleware/requirePermission';
+import { requirePermission } from '../../../user-service/src/middlewares/requirePermission';
 
 const router: Router = express.Router();
 
 router.use(authMiddleware as RequestHandler);
-router.use( requirePermission('media:manage', { application: 'cms' }),)
+router.use( requirePermission
+  ('media:manage', 
+    { application: 'cms',
+        allowSuperadmin: true
+    }),)
 
 /**
  * @route GET /api/media

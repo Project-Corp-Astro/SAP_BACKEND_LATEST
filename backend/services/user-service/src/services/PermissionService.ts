@@ -1,7 +1,9 @@
 import UserModel from '../models/User';
 import RolePermissionModel from '../models/RolePermission.model';
 import { Types } from 'mongoose';
+import redis from '../utils/redis';
 
+const { redisUtils } = redis;
 interface Permission {
   resource: string;
   action: string;
@@ -22,41 +24,68 @@ export class PermissionService {
     try {
       const [requiredResource, requiredAction] = requiredPermission.split(':');
 
-      // If we have rolePermissionIds, use them directly
       if (rolePermissionIds?.length) {
-        const roles = await RolePermissionModel.find({
-          _id: { $in: rolePermissionIds.map(id => new Types.ObjectId(id)) },
-          $or: [
-            { application: application },
-            { application: '*' }
-          ]
-        }).lean();
+        // Try cache first
+        const roles = await Promise.all(
+          rolePermissionIds.map(async id => {
+            const cached = await redisUtils.getCachedRolePermission(id);
+            return cached || null;
+          })
+        );
+        // Collect missing IDs (not in cache)
+        const missingIds = rolePermissionIds.filter((_, idx) => roles[idx] === null);
 
-        // Check permissions in each role
-        for (const role of roles) {
-          // Check if role has wildcard permission
-          if (role.permissions?.includes('*:*')) {
-            return true;
-          }
+        // Fetch missing from DB (with application filter)
+        if (missingIds.length > 0) {
+          const dbRoles = await RolePermissionModel.find({
+            _id: { $in: missingIds.map(id => new Types.ObjectId(id)) },
+            $or: [
+              { application: application },
+              { application: '*' }
+            ]
+          }).lean();
 
-          // Check specific permission
-          if (role.permissions?.includes(requiredPermission)) {
-            return true;
-          }
+          // Cache DB results
+          await Promise.all(
+            dbRoles.map(role => redisUtils.cacheRolePermission(role._id.toString(), role))
+          );
 
-          // Check wildcard resource with specific action (e.g., 'user:*')
-          const wildcardResource = `*:${requiredPermission.split(':')[1]}`;
-          if (role.permissions?.includes(wildcardResource)) {
-            return true;
+          // Replace nulls in roles array
+          let dbIdx = 0;
+          for (let i = 0; i < roles.length; i++) {
+            if (roles[i] === null) {
+              roles[i] = dbRoles[dbIdx++] || null;
+            }
           }
         }
+
+        // Filter valid roles
+        const validRoles = roles.filter(r => r !== null);
+
+        // Check permissions
+        for (const role of validRoles) {
+          if (role.application !== '*' && role.application !== application) {
+            continue;
+          }
+
+          if (role.permissions?.includes('*:*')) return true;
+          if (role.permissions?.includes(requiredPermission)) return true;
+
+          const wildcardResource = `*:${requiredAction}`;
+          if (role.permissions?.includes(wildcardResource)) return true;
+
+          const wildcardAction = `${requiredResource}:*`;
+          if (role.permissions?.includes(wildcardAction)) return true;
+        }
+
         return false;
       }
+
 
       // Fallback to user roles if no rolePermissionIds provided
       const roles = await UserModel.aggregate([
         { $match: { _id: typeof userId === 'string' ? new Types.ObjectId(userId) : userId } },
-        { 
+        {
           $lookup: {
             from: 'rolepermissions',
             localField: 'roles',
@@ -78,17 +107,17 @@ export class PermissionService {
       ]).exec();
 
       const rolesToCheck = roles.map(r => r.roleData);
-      
+
       for (const role of rolesToCheck) {
         // Normalize permissions to array of { resource, action } objects
-        const normalizedPermissions = Array.isArray(role.permissions) 
+        const normalizedPermissions = Array.isArray(role.permissions)
           ? role.permissions.map((p: PermissionInput): Permission => {
-              if (typeof p === 'string') {
-                const [resource, action] = p.split(':');
-                return { resource, action };
-              }
-              return p;
-            })
+            if (typeof p === 'string') {
+              const [resource, action] = p.split(':');
+              return { resource, action };
+            }
+            return p;
+          })
           : [];
 
         // Check if role has wildcard permission
@@ -98,13 +127,13 @@ export class PermissionService {
 
         // Check specific permission
         if (normalizedPermissions.some((p: Permission) => {
-          return (p.resource === requiredResource || p.resource === '*') && 
-                 (p.action === requiredAction || p.action === '*');
+          return (p.resource === requiredResource || p.resource === '*') &&
+            (p.action === requiredAction || p.action === '*');
         })) {
           return true;
         }
       }
-      
+
       return false;
     } catch (err) {
       console.error('Error in hasPermission:', err);
@@ -115,50 +144,42 @@ export class PermissionService {
   /**
    * Get all permissions for a user
    */
-  static async getUserPermissions(
-    userId: string | Types.ObjectId,
-    application: string = '*'
-  ): Promise<string[]> {
+  static async getUserRolePermissions(
+    userId: string | Types.ObjectId
+  ): Promise<any[]> {
     try {
-      const userObjectId = typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
-
+      const userObjectId =
+        typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
+  
       const results = await UserModel.aggregate([
         { $match: { _id: userObjectId } },
-        { 
+        {
           $lookup: {
             from: 'rolepermissions',
             localField: 'roles',
             foreignField: '_id',
-            as: 'roleData'
-          }
-        },
-        { $unwind: '$roleData' },
-        {
-          $match: {
-            $or: [
-              { 'roleData.application': application },
-              { 'roleData.application': '*' }
-            ]
+            as: 'rolePermissions'
           }
         },
         {
           $project: {
-            permissions: '$roleData.permissions'
+            rolePermissions: 1
           }
         }
       ]).exec();
-
-      const allPermissions = new Set<string>();
-      results.forEach(role => {
-        (role.permissions || []).forEach((perm: string) => allPermissions.add(perm));
-      });
-
-      return Array.from(allPermissions);
+  
+      // Flatten the rolePermissions array
+      if (results.length > 0 && Array.isArray(results[0].rolePermissions)) {
+        return results[0].rolePermissions;
+      }
+  
+      return [];
     } catch (err) {
-      console.error('Error in getUserPermissions aggregate:', err);
+      console.error('Error in getUserRolePermissions:', err);
       return [];
     }
   }
+  
 
   /**
    * Check if a role has a specific permission
@@ -174,16 +195,16 @@ export class PermissionService {
       if (!role) return false;
 
       const [requiredResource, requiredAction] = requiredPermission.split(':');
-      
+
       // Normalize permissions
-      const normalizedPermissions = Array.isArray(role.permissions) 
+      const normalizedPermissions = Array.isArray(role.permissions)
         ? role.permissions.map((p: PermissionInput): Permission => {
-            if (typeof p === 'string') {
-              const [resource, action] = p.split(':');
-              return { resource, action };
-            }
-            return p;
-          })
+          if (typeof p === 'string') {
+            const [resource, action] = p.split(':');
+            return { resource, action };
+          }
+          return p;
+        })
         : [];
 
       // Check wildcard permission
@@ -193,8 +214,8 @@ export class PermissionService {
 
       // Check specific permission
       return normalizedPermissions.some((p: Permission) => {
-        return (p.resource === requiredResource || p.resource === '*') && 
-               (p.action === requiredAction || p.action === '*');
+        return (p.resource === requiredResource || p.resource === '*') &&
+          (p.action === requiredAction || p.action === '*');
       });
     } catch (err) {
       console.error('Error in roleHasPermission:', err);

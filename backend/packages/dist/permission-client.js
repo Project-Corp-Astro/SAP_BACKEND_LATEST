@@ -1,0 +1,87 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.requireRemotePermission = requireRemotePermission;
+exports.requireRemoteAnyPermission = requireRemoteAnyPermission;
+const axios_1 = __importDefault(require("axios"));
+const USER_SERVICE_PERMISSION_API_URL = process.env.USER_SERVICE_PERMISSION_API_URL || 'http://localhost:3000';
+/**
+ * Middleware to require a specific permission (checked via remote user service)
+ */
+function requireRemotePermission(permission, options = {}) {
+    const { application = '*', allowSuperadmin = true } = options;
+    return async (req, res, next) => {
+        var _a, _b;
+        try {
+            //   if (!req.user || !req.user._id) {
+            //     return res.status(401).json({ success: false, message: 'Authentication required' });
+            //   }
+            const response = await axios_1.default.post(USER_SERVICE_PERMISSION_API_URL, {
+                permission,
+                application,
+                allowSuperadmin
+            }, {
+                headers: {
+                    Authorization: req.headers.authorization || ''
+                }
+            });
+            if ((_b = (_a = response.data) === null || _a === void 0 ? void 0 : _a.data) === null || _b === void 0 ? void 0 : _b.hasPermission) {
+                return next();
+            }
+            else {
+                return res.status(403).json({
+                    success: false,
+                    message: `Required permission: ${permission}`
+                });
+            }
+        }
+        catch (err) {
+            console.error('Permission check error', err);
+            return res.status(500).json({
+                success: false,
+                message: 'Permission check failed'
+            });
+        }
+    };
+}
+/**
+ * Middleware to require any of a list of permissions (checked via remote user service)
+ */
+function requireRemoteAnyPermission(permissions, options = {}) {
+    const { application = '*', allowSuperadmin = true } = options;
+    return async (req, res, next) => {
+        var _a, _b;
+        try {
+            //   if (!req.user || !req.user._id) {
+            //     return res.status(401).json({ success: false, message: 'Authentication required' });
+            //   }
+            for (const permission of permissions) {
+                const response = await axios_1.default.post(USER_SERVICE_PERMISSION_API_URL, {
+                    permission,
+                    application,
+                    allowSuperadmin
+                }, {
+                    headers: {
+                        Authorization: req.headers.authorization || ''
+                    }
+                });
+                if ((_b = (_a = response.data) === null || _a === void 0 ? void 0 : _a.data) === null || _b === void 0 ? void 0 : _b.hasPermission) {
+                    return next();
+                }
+            }
+            return res.status(403).json({
+                success: false,
+                message: 'Insufficient permissions'
+            });
+        }
+        catch (err) {
+            console.error('Permission check error', err);
+            return res.status(500).json({
+                success: false,
+                message: 'Permission check failed'
+            });
+        }
+    };
+}

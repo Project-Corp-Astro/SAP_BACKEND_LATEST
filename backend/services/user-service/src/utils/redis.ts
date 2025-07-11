@@ -286,5 +286,6 @@ export default {
   redisUtils,
   defaultCache,
   userCache,
-  rolePermissionCache
+  rolePermissionCache,
+  
 };

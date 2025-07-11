@@ -12,9 +12,7 @@ import {
   ActivityFilter,
   ActivityPaginationResult
 } from '../interfaces/shared-types';
-import { UserRole, Permission } from '@corp-astro/shared-types';
 import redis from '../utils/redis';
-// import permissionService from './permission.service';
 
 const { redisUtils, userCache } = redis;
 const logger = userServiceLogger;
