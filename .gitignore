@@ -1,5 +1,12 @@
 # Dependencies
+**/node_modules/
 node_modules/
+shared/types/node_modules/
+
+# Environment files
+.env
+.env.*
+!.env.example
 
 # Logs
 logs/
@@ -13,4 +20,20 @@ npm-debug.log*
 backend/logs/
 **/logs/
 **/*.log
+
+# Build outputs
+dist/
+build/
+*.d.ts.map
+*.js.map
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
 

@@ -4,15 +4,34 @@ import User from '../models/User';
 import UserActivity, { ActivityType } from '../models/UserActivity';
 import UserDevice from '../models/UserDevice';
 import { trackDatabaseOperation } from '../utils/performance';
+import RolePermissionModel from '../models/RolePermission.model';
+
 import {
   UserDocument,
   UserFilter,
-  UserPaginationResult,
   SecurityPreferences,
   ActivityFilter,
   ActivityPaginationResult
 } from '../interfaces/shared-types';
 import redis from '../utils/redis';
+
+interface FormattedUser {
+  _id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  isActive: boolean;
+  roles: string[];
+  permissions: string[];
+}
+
+interface UserPaginationResult {
+  users: FormattedUser[];
+  totalUsers: number;
+  totalPages: number;
+  currentPage: number;
+  usersPerPage: number;
+}
 
 const { redisUtils, userCache } = redis;
 const logger = userServiceLogger;
@@ -125,7 +144,13 @@ class UserService {
     }
   }
 
-  async getUsers(filters: UserFilter, page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc'): Promise<UserPaginationResult> {
+  async getUsers(
+    filters: UserFilter,
+    page = 1,
+    limit = 10,
+    sortBy = 'createdAt',
+    sortOrder = 'desc'
+  ): Promise<UserPaginationResult> {
     if (limit > 100) {
       logger.warn(`High volume user query: limit=${limit}`);
     }
@@ -159,22 +184,35 @@ class UserService {
       const totalUsers = await trackDatabaseOperation<number>('countUsers', async () =>
         User.countDocuments(query).exec()
       );
+
       const skip = (page - 1) * limit;
       const sort: Record<string, 1 | -1> = { [sortBy]: sortOrder === 'asc' ? 1 : -1 };
-      const users = await trackDatabaseOperation<UserDocument[]>('findUsers', async () =>
-        User.find(query).select('email firstName lastName role isActive').sort(sort).skip(skip).limit(limit).exec()
+
+      const users = await trackDatabaseOperation<any[]>('findUsers', async () =>
+        User.find(query)
+          
+          .populate({
+            path: 'roles',
+            model: RolePermissionModel.modelName,
+            select: 'role permissions'
+          })
+          .sort(sort)
+          .skip(skip)
+          .limit(limit)
+          .exec()
       );
 
-      // Cache individual users
-      const cachePromises = users.map(user =>
-        redisUtils.cacheUser(user._id.toString(), user, 3600).catch(error =>
-          logger.warn(`Error caching user ${user._id}: ${error instanceof Error ? error.message : String(error)}`)
-        )
-      );
-      await Promise.all(cachePromises);
-
+      // const formattedUsers = users.map(user => ({
+      //   _id: user._id,
+      //   email: user.email,
+      //   firstName: user.firstName,
+      //   lastName: user.lastName,
+      //   isActive: user.isActive,
+      //   roles: user.roles?.map((r: any) => r.role) ?? [],
+      //   permissions: user.roles?.flatMap((r: any) => r.permissions) ?? []
+      // }));
       const result: UserPaginationResult = {
-        users,
+        users, // full Mongoose docs with all fields, including roles[]
         totalUsers,
         totalPages: Math.ceil(totalUsers / limit),
         currentPage: page,
@@ -195,30 +233,40 @@ class UserService {
     }
   }
 
-  async getUserById(userId: string): Promise<UserDocument> {
+  async getUserById(userId: string): Promise<any> {
     try {
-      const cached = await redisUtils.getCachedUser(userId); // Stats tracked in getCachedUser
+      const cached = await redisUtils.getCachedUser(userId);
       if (cached) {
         logger.info('Served user from Redis cache');
         return cached;
       }
 
       logger.info('Fetching user from MongoDB');
-      const user = await trackDatabaseOperation<UserDocument | null>('findUserById', async () =>
-        User.findById(userId).select('-password').exec()
+      const user = await trackDatabaseOperation<any | null>('findUserById', async () =>
+        User.findById(userId)
+          .select('-password')
+          .populate({
+            path: 'roles',
+            model: RolePermissionModel.modelName,
+            select: 'role permissions'
+          })
+          .exec()
       );
+
       if (!user) {
         throw new Error('User not found');
       }
 
+      const formattedUser = user;
+
       try {
-        await redisUtils.cacheUser(userId, user, 3600);
+        await redisUtils.cacheUser(userId, formattedUser, 3600);
         logger.info(`Cached user ${userId}`);
       } catch (cacheError) {
         logger.warn(`Error caching user ${userId}: ${cacheError instanceof Error ? cacheError.message : String(cacheError)}`);
       }
 
-      return user;
+      return formattedUser;
     } catch (error) {
       logger.error('Error getting user by ID:', { error: (error as Error).message, userId });
       throw error;
