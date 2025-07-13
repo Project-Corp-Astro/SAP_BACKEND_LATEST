@@ -107,3 +107,63 @@ Thumbs.db
 # Redis dump file
 dump.rdb
 
+# Docker and containerization
+.docker/
+docker-compose.override.yml
+docker-compose.*.yml
+!docker-compose.yml
+!docker-compose.production.yml
+!docker-compose.staging.yml
+Dockerfile.local
+.dockerignore
+
+# Kubernetes
+k8s/secrets/
+k8s/local/
+*.kubeconfig
+
+# Google Cloud
+.gcloud/
+gcp-key.json
+service-account-key.json
+
+# Monitoring and logging
+prometheus_data/
+grafana_data/
+monitoring/data/
+monitoring/logs/
+
+# Container registries
+.registry/
+
+# Documentation build artifacts
+docs/build/
+*.pdf
+*.docx
+
+# Progress tracking (keep source, ignore builds)
+**/PROGRESS_TRACKER_*.tmp
+**/PROGRESS_TRACKER_*.backup
+
+# Containerization artifacts
+containers/build/
+containers/cache/
+.buildx-cache/
+
+# Security scanning results
+trivy-results/
+snyk-results/
+security-reports/
+
+# Performance testing results
+performance-results/
+load-test-reports/
+
+# Terraform (for future IaC)
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+terraform.tfplan
+terraform.tfvars
+

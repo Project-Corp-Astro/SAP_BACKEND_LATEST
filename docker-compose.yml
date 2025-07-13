@@ -1,0 +1,253 @@
+version: '3.8'
+
+services:
+  # Database Services
+  mongodb:
+    image: mongo:6.0
+    container_name: sap-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-password123}
+      MONGO_INITDB_DATABASE: ${MONGO_DB:-sap-db}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - sap-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: sap-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis123}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - sap-network
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.8.0
+    container_name: sap-elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - sap-network
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: sap-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-sap_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - sap-network
+
+  # Application Services
+  api-gateway:
+    build:
+      context: .
+      target: production
+    container_name: sap-api-gateway
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 5001
+      MONGO_URI: mongodb://admin:password123@mongodb:27017/sap-db?authSource=admin
+      REDIS_HOST: redis
+      REDIS_PASSWORD: redis123
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: sap_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your-super-secret-refresh-key}
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+    ports:
+      - "5001:5001"
+    depends_on:
+      - mongodb
+      - redis
+      - elasticsearch
+      - postgres
+    networks:
+      - sap-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  auth-service:
+    build:
+      context: .
+      target: production
+    container_name: sap-auth-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      MONGO_URI: mongodb://admin:password123@mongodb:27017/sap-db?authSource=admin
+      REDIS_HOST: redis
+      REDIS_PASSWORD: redis123
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your-super-secret-refresh-key}
+    ports:
+      - "3001:3001"
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - sap-network
+
+  user-service:
+    build:
+      context: .
+      target: production
+    container_name: sap-user-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3002
+      MONGO_URI: mongodb://admin:password123@mongodb:27017/sap-db?authSource=admin
+      REDIS_HOST: redis
+      REDIS_PASSWORD: redis123
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+    ports:
+      - "3002:3002"
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - sap-network
+
+  content-service:
+    build:
+      context: .
+      target: production
+    container_name: sap-content-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3003
+      MONGO_URI: mongodb://admin:password123@mongodb:27017/sap-db?authSource=admin
+      REDIS_HOST: redis
+      REDIS_PASSWORD: redis123
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+    ports:
+      - "3003:3003"
+    depends_on:
+      - mongodb
+      - redis
+      - elasticsearch
+    networks:
+      - sap-network
+
+  subscription-service:
+    build:
+      context: .
+      target: production
+    container_name: sap-subscription-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3004
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: sap_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      REDIS_HOST: redis
+      REDIS_PASSWORD: redis123
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+    ports:
+      - "3004:3004"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - sap-network
+
+  # Monitoring Services
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: sap-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - sap-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: sap-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin123}
+      GF_SECURITY_ADMIN_USER: admin
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - sap-network
+
+  # Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: sap-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - api-gateway
+    networks:
+      - sap-network
+
+volumes:
+  mongodb_data:
+  redis_data:
+  elasticsearch_data:
+  postgres_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  sap-network:
+    driver: bridge

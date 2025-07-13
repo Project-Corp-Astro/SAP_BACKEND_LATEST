@@ -1,0 +1,66 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "rules/*.yml"
+
+scrape_configs:
+  # SAP Backend Services
+  - job_name: 'sap-api-gateway'
+    static_configs:
+      - targets: ['api-gateway:5001']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'sap-auth-service'
+    static_configs:
+      - targets: ['auth-service:3001']
+    metrics_path: '/api/monitoring/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'sap-user-service'
+    static_configs:
+      - targets: ['user-service:3002']
+    metrics_path: '/api/monitoring/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'sap-content-service'
+    static_configs:
+      - targets: ['content-service:3003']
+    metrics_path: '/api/monitoring/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'sap-subscription-service'
+    static_configs:
+      - targets: ['subscription-service:3004']
+    metrics_path: '/api/monitoring/metrics'
+    scrape_interval: 30s
+
+  # Database Monitoring
+  - job_name: 'mongodb-exporter'
+    static_configs:
+      - targets: ['mongodb-exporter:9216']
+
+  - job_name: 'redis-exporter'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+
+  - job_name: 'postgres-exporter'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+
+  - job_name: 'elasticsearch-exporter'
+    static_configs:
+      - targets: ['elasticsearch-exporter:9114']
+
+  # Node Exporter for system metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
