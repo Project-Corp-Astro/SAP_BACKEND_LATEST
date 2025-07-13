@@ -6,6 +6,7 @@
 import Redis from 'ioredis';
 import { createServiceLogger } from './logger';
 import config from '../config/index';
+import { Document, Types } from 'mongoose';
 
 // Initialize logger
 const logger = createServiceLogger('redis-manager');
@@ -159,6 +160,12 @@ export function createServiceRedisClient(
  * Provides a simple interface for cache operations
  */
 export class RedisCache {
+  getCachedRolePermission(id: string) {
+    throw new Error('Method not implemented.');
+  }
+  cacheRolePermission(arg0: any, role: Document<any, any, any> & { _id: Types.ObjectId; }): any {
+    throw new Error('Method not implemented.');
+  }
   private readonly client: Redis;
   private readonly serviceName: string;
   private readonly logger: any;
@@ -288,14 +295,34 @@ export class RedisCache {
   }
 
   /**
-   * Find keys matching a pattern
+   * Find keys matching a pattern using SCAN (safer for production)
    * 
    * @param pattern - Key pattern (e.g., "user:*")
+   * @param count - Number of items to return per iteration (default: 100)
    * @returns Array of matching keys
    */
-  async keys(pattern: string): Promise<string[]> {
+  async keys(pattern: string, count = 100): Promise<string[]> {
+    const found: string[] = [];
+    let cursor = '0';
+    
     try {
-      return await this.client.keys(pattern);
+      do {
+        const reply = await this.client.scan(
+          cursor,
+          'MATCH',
+          pattern,
+          'COUNT',
+          count.toString()
+        );
+        
+        cursor = reply[0];
+        found.push(...reply[1]);
+        
+        // Prevent infinite loops just in case
+        if (cursor === '0') break;
+      } while (cursor !== '0');
+      
+      return found;
     } catch (error) {
       this.logger.error(`Error finding keys matching pattern ${pattern}`, { 
         error: (error as Error).message,
@@ -306,21 +333,40 @@ export class RedisCache {
   }
 
   /**
-   * Delete keys matching a pattern
+   * Delete keys matching a pattern using SCAN (safer for production)
    * 
    * @param pattern - Key pattern (e.g., "user:*")
+   * @param batchSize - Number of keys to delete in a single batch (default: 100)
    * @returns Number of keys deleted
    */
-  async deleteByPattern(pattern: string): Promise<number> {
+  async deleteByPattern(pattern: string, batchSize = 100): Promise<number> {
     try {
-      const keys = await this.client.keys(pattern);
+      const keys = await this.keys(pattern, batchSize);
       if (keys.length === 0) return 0;
       
-      return await this.client.del(...keys);
+      // Delete keys in batches to avoid blocking Redis for too long
+      const batchCount = Math.ceil(keys.length / batchSize);
+      let totalDeleted = 0;
+      
+      for (let i = 0; i < batchCount; i++) {
+        const batch = keys.slice(i * batchSize, (i + 1) * batchSize);
+        if (batch.length === 0) continue;
+        
+        const deleted = await this.client.del(...batch);
+        totalDeleted += deleted;
+        
+        // Small delay between batches to prevent Redis from being overwhelmed
+        if (i < batchCount - 1) {
+          await new Promise(resolve => setTimeout(resolve, 10));
+        }
+      }
+      
+      return totalDeleted;
     } catch (error) {
       this.logger.error(`Error deleting keys by pattern ${pattern}`, {
         error: (error as Error).message,
-        service: this.serviceName
+        service: this.serviceName,
+        pattern
       });
       return 0;
     }

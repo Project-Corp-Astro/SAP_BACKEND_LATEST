@@ -6,11 +6,12 @@
  */
 
 import { Request, Response } from 'express';
+import { redisUtils, contentCache, mediaCache, videoCache, categoryCache } from '../utils/redis';
+import { getRedisHealthMetrics } from '../../../../shared/utils/redis-manager';
 import performanceMonitor from '../utils/performance';
-import { cacheService } from '../utils/cache';
-import { contentCache } from '../utils/redis';
 import mongoose from 'mongoose';
 import os from 'os';
+import logger from '../../../../shared/utils/logger';
 
 class MonitoringController {
   /**
@@ -23,7 +24,7 @@ class MonitoringController {
     const metrics = performanceMonitor.getMetrics();
     
     // Get cache statistics
-    const cacheStats = cacheService.getStats();
+    const cacheStats = redisUtils.getStats();
     
     // Get system information
     const systemInfo = {
@@ -89,8 +90,15 @@ class MonitoringController {
     const cpuStatus = os.loadavg()[0] > os.cpus().length ? 'critical' : 'healthy';
     
     // Check Redis health
-    const redisConnected = await contentCache.ping();
+    const redisConnected = await redisUtils.pingRedis();
     const redisStatus = redisConnected ? 'healthy' : 'critical';
+    const redisMetrics = await getRedisHealthMetrics('content') || {
+      uptime: '0',
+      connectedClients: '0',
+      usedMemory: '0',
+      totalKeys: 0,
+      hitRate: '0%'
+    };
     
     // Check Database health
     const dbStatus = mongoose.connection.readyState === 1 ? 'healthy' : 'critical';
@@ -119,7 +127,8 @@ class MonitoringController {
         redis: {
           status: redisStatus,
           connected: redisConnected,
-          caches: ['contentCache']
+          caches: ['contentCache', 'mediaCache', 'videoCache', 'categoryCache'],
+          metrics: redisMetrics
         },
         database: {
           status: dbStatus,

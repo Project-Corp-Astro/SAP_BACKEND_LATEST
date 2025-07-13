@@ -1,7 +1,7 @@
 import express, { Request, Response, NextFunction, Router } from 'express';
 import * as userController from '../controllers/user.controller';
-import { authMiddleware, roleAuthorization } from '../middlewares/auth.middleware';
-import { Permission, UserRole } from '@corp-astro/shared-types';
+import { authMiddleware } from '../middlewares/auth.middleware';
+import { requirePermission } from '../middlewares/requirePermission';
 
 // Export controllers for testing purposes
 export { userController };
@@ -22,20 +22,6 @@ export const wrapController = (controller: any): express.RequestHandler => {
 
 const router: Router = express.Router();
 
-
-/**
- * @route GET /api/permissions
- * @desc Get all available permissions
- * @access Private (Admin or system.manage_roles permission)
- */
-router.get('/permissions',
-  asRequestHandler(authMiddleware),
-  asRequestHandler(roleAuthorization([UserRole.ADMIN])),
-  wrapController(userController.getAllPermissions)
-);
-
-
-
 /**
  * @route GET /api/users
  * @desc Get all users with pagination and filtering
@@ -43,20 +29,17 @@ router.get('/permissions',
  */
 router.get('/', 
   // asRequestHandler(authMiddleware), 
+<<<<<<< HEAD
   // asRequestHandler(roleAuthorization([UserRole.ADMIN])),
+=======
+  // requirePermission('user:read', { application: 'system',allowSuperadmin:true }),
+>>>>>>> 31-rbac-implementation
   wrapController(userController.getUsers)
 );
 
-/**
- * @route POST /api/users
- * @desc Create a new user
- * @access Private (Admin only)
- */
-router.post('/', 
-  asRequestHandler(authMiddleware), 
-  asRequestHandler(roleAuthorization([UserRole.ADMIN])), 
-  wrapController(userController.createUser)
-);
+
+
+
 
 /**
  * @route GET /api/users/:userId
@@ -64,7 +47,9 @@ router.post('/',
  * @access Private (Admin or Self)
  */
 router.get('/:userId', 
+ 
   asRequestHandler(authMiddleware), 
+   requirePermission('user:read', { application: 'system',allowSuperadmin:true }),
   wrapController(userController.getUserById)
 );
 
@@ -75,6 +60,7 @@ router.get('/:userId',
  */
 router.put('/:userId', 
   asRequestHandler(authMiddleware), 
+  requirePermission('user:update', { application: 'system',allowSuperadmin:true }),
   wrapController(userController.updateUser)
 );
 
@@ -85,7 +71,7 @@ router.put('/:userId',
  */
 router.delete('/:userId', 
   asRequestHandler(authMiddleware), 
-  asRequestHandler(roleAuthorization([UserRole.ADMIN])), 
+  requirePermission('user:delete', { application: 'system',allowSuperadmin:true }),
   wrapController(userController.deleteUser)
 );
 
@@ -96,21 +82,9 @@ router.delete('/:userId',
  */
 router.patch('/:userId/status', 
   asRequestHandler(authMiddleware), 
-  asRequestHandler(roleAuthorization([UserRole.ADMIN])), 
+  requirePermission('user:update', { application: 'system',allowSuperadmin:true }),
   wrapController(userController.updateUserStatus)
 );
-
-/**
- * @route PUT /api/users/:userId/permissions
- * @desc Update user permissions
- * @access Private (Admin or system.manage_roles permission)
- */
-router.put('/:userId/permissions',
-  asRequestHandler(authMiddleware),
-  asRequestHandler(roleAuthorization([UserRole.ADMIN])),
-  wrapController(userController.updateUserPermissions)
-);
-
 /**
  * @route PUT /api/users/profile
  * @desc Update authenticated user's profile
@@ -118,6 +92,7 @@ router.put('/:userId/permissions',
  */
 router.put('/profile', 
   asRequestHandler(authMiddleware),
+  requirePermission('user:update', { application: 'system',allowSuperadmin:true }),
   wrapController(userController.updateProfile)
 );
 
@@ -128,6 +103,7 @@ router.put('/profile',
  */
 router.put('/password', 
   asRequestHandler(authMiddleware),
+  requirePermission('user:update', { application: 'system',allowSuperadmin:true }),
   wrapController(userController.changePassword)
 );
 
@@ -138,6 +114,7 @@ router.put('/password',
  */
 router.put('/security-preferences', 
   asRequestHandler(authMiddleware),
+  requirePermission('user:update', { application: 'system',allowSuperadmin:true }),
   wrapController(userController.updateSecurityPreferences)
 );
 
@@ -148,6 +125,7 @@ router.put('/security-preferences',
  */
 router.get('/:userId/activity', 
   asRequestHandler(authMiddleware),
+  requirePermission('user:read', { application: 'system',allowSuperadmin:true }),
   wrapController(userController.getUserActivity)
 );
 
@@ -158,6 +136,7 @@ router.get('/:userId/activity',
  */
 router.get('/devices', 
   asRequestHandler(authMiddleware),
+  requirePermission('user:read', { application: 'system',allowSuperadmin:true }),
   wrapController(userController.getUserDevices)
 );
 
@@ -168,6 +147,7 @@ router.get('/devices',
  */
 router.delete('/devices/:deviceId', 
   asRequestHandler(authMiddleware),
+  requirePermission('user:delete', { application: 'system',allowSuperadmin:true }),
   wrapController(userController.removeUserDevice)
 );
 

@@ -3,7 +3,6 @@ import { validationResult } from 'express-validator/src/validation-result';
 import { sessionCache, otpCache } from '../utils/redis';
 import logger from '../../../../shared/utils/logger';
 import * as authService from '../services/auth.service';
-import { IUser } from '../../../../shared/interfaces/user.interface';
 // Import type fixes and assertion helpers
 import { asIUser } from '../utils/type-assertions';
 // Import type fixes
@@ -13,13 +12,9 @@ import '../types/auth-types';
 // Import user type converter
 import { convertToIUser } from '../utils/user-type-converter';
 // Import UserRole from shared types instead of local interfaces
-import { UserRole } from '@corp-astro/shared-types';
 import {
-  ExtendedUser,
   UserDocument,
   RegistrationRequest,
-  AuthResponse,
-  JwtPayload
 } from '../interfaces/shared-types';
 
 // Define a custom interface that doesn't extend Request to avoid type conflicts
@@ -43,9 +38,9 @@ export const register = async (req: Request, res: Response, next: NextFunction):
     const userData: RegistrationRequest = { username, email, password, firstName, lastName };
     // Use a proper type assertion with unknown first to avoid TypeScript error
     const authReq = req as unknown as AuthenticatedRequest;
-    if (role && authReq.user?.role === UserRole.ADMIN) {
-      (userData as any).role = role;
-    }
+    // if (role && authReq.user?.role === UserRole.ADMIN) {
+    //   (userData as any).role = role;
+    // }
     const user = await authService.register(userData);
     res.status(201).json({ success: true, message: 'User registered successfully', data: user });
   } catch (error: any) {
@@ -200,13 +195,45 @@ export const getProfile = (req: AuthenticatedRequest, res: Response): void => {
 export const logout = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     if (!req.user) {
+      logger.error('Logout attempt failed - user not authenticated', { userId: req.user?._id });
       res.status(401).json({ success: false, message: 'Authentication required' });
       return;
     }
+
+    logger.info('Logout attempt started', { userId: req.user._id });
+
+    // Get the access token from headers
+    const authHeader = req.headers.authorization;
+    const accessToken = authHeader?.split(' ')[1];
+
+    // Invalidate both access and refresh tokens
+    if (accessToken) {
+      logger.info('Invalidating access token', { tokenPrefix: accessToken.slice(0, 5) });
+      await sessionCache.del(`access:${accessToken}`);
+    }
+    logger.info('Invalidating refresh token', { userId: req.user._id });
     await sessionCache.del(`refresh:${req.user._id}`);
-    res.status(200).json({ success: true, message: 'Logout successful' });
-  } catch {
-    res.status(500).json({ success: false, message: 'Error during logout' });
+
+    // Clear any session data
+    logger.info('Clearing session data', { userId: req.user._id });
+    await sessionCache.del(`session:${req.user._id}`);
+
+    logger.info('Logout successful', { userId: req.user._id });
+    
+    res.status(200).json({ 
+      success: true, 
+      message: 'Logout successful',
+      data: {
+        message: 'All tokens have been invalidated'
+      }
+    });
+  } catch (error: any) {
+    logger.error('Logout error:', { 
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?._id
+    });
+    next(error);
   }
 };
 

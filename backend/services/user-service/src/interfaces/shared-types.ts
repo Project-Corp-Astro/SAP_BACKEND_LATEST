@@ -149,8 +149,7 @@ export enum AppAccess {
 export interface JwtPayload {
   userId: string;
   email: string;
-  role: UserRole | string;
-  permissions?: string[];
+  rolePermissionIds?: string[];  
   isSpecialist?: boolean;
   businessIds?: string[];
   subscriptionTier?: string;

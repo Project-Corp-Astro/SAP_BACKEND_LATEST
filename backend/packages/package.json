@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "name": "@corp-astro/permission-client",
   "version": "1.0.0",
   "description": "Express middleware for permission checking",
@@ -23,3 +24,29 @@
     "dist"
   ]
 }
+=======
+    "name": "@corp-astro/permission-client",
+    "version": "1.0.0",
+    "description": "Express middleware for permission checking",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+      "build": "tsc",
+      "prepare": "npm run build",
+      "watch": "tsc -w"
+    },
+    "dependencies": {
+      "axios": "^1.10.0"
+    },
+    "peerDependencies": {
+      "express": "^4.18.2",
+      "@types/express": "^4.17.17"
+    },
+    "devDependencies": {
+      "typescript": "^5.0.0"
+    },
+    "files": [
+      "dist"
+    ]
+  }
+>>>>>>> 31-rbac-implementation

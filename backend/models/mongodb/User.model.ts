@@ -1,57 +1,35 @@
-import mongoose, { Schema } from 'mongoose';
+import { Schema, model, Document, Types } from 'mongoose';
+import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
-import { 
-  UserDocument, 
-  IUser, 
-  UserRole, 
-  ThemePreference, 
-  NotificationPreferences,
-  UserPreferences,
-  SecurityPreferences,
-  UserAddress,
-  UserDevice,
-  AstrologyUserProfile,
-  BusinessProfile,
-  AstrologyPreferences,
-  AstrologySubscriptionTier,
-  AstrologySubscription
-} from '../../shared/interfaces/user.interface';
+import { IUser, IUserPreferences, IUserAddress, IUserDevice } from '../../shared/interfaces/user.interface';
 
-// Notification Preferences Schema
-const notificationPreferencesSchema = new Schema<NotificationPreferences>({
-  email: { type: Boolean, default: true },
-  push: { type: Boolean, default: false }
-}, { _id: false });
-
-// User Preferences Schema
-const userPreferencesSchema = new Schema<UserPreferences>({
+// Extend the IUser interface to include Mongoose Document properties
+export interface IUserDocument extends Omit<IUser, '_id'>, Document {
+  _id: Types.ObjectId;
+  comparePassword(candidatePassword: string): Promise<boolean>;
+  fullName: string; // Virtual field
+}
+const userPreferencesSchema = new Schema<IUserPreferences>({
   theme: { 
     type: String, 
-    enum: Object.values(ThemePreference),
-    default: ThemePreference.SYSTEM 
+    enum: ['light', 'dark', 'system'],
+    default: 'system'
   },
-  notifications: { 
-    type: notificationPreferencesSchema, 
-    default: () => ({
-      email: true,
-      push: false
-    })
+  notifications: {
+    email: { type: Boolean, default: true },
+    push: { type: Boolean, default: false }
   },
-  language: { type: String },
-  timezone: { type: String }
+  language: { 
+    type: String, 
+    default: 'en' 
+  },
+  timezone: { 
+    type: String, 
+    default: 'UTC' 
+  }
 }, { _id: false });
 
-// Security Preferences Schema
-const securityPreferencesSchema = new Schema<SecurityPreferences>({
-  twoFactorEnabled: { type: Boolean, default: false },
-  loginNotifications: { type: Boolean, default: true },
-  activityAlerts: { type: Boolean, default: true },
-  trustedDevicesOnly: { type: Boolean },
-  passwordExpiryDays: { type: Number }
-}, { _id: false });
-
-// User Address Schema
-const userAddressSchema = new Schema<UserAddress>({
+const userAddressSchema = new Schema<IUserAddress>({
   street: { type: String },
   city: { type: String },
   state: { type: String },
@@ -59,96 +37,34 @@ const userAddressSchema = new Schema<UserAddress>({
   country: { type: String }
 }, { _id: false });
 
-// Location Schema (reusable)
-const locationSchema = new Schema({
-  city: { type: String },
-  country: { type: String },
-  latitude: { type: Number },
-  longitude: { type: Number },
-  timezone: { type: String }
-}, { _id: false });
-
-// User Device Schema
-const userDeviceSchema = new Schema<UserDevice>({
-  deviceId: { type: String, required: true },
-  deviceName: { type: String, required: true },
-  deviceType: { type: String, required: true },
+const userDeviceSchema = new Schema<IUserDevice>({
+  deviceId: { 
+    type: String, 
+    required: true 
+  },
+  deviceName: { 
+    type: String, 
+    required: true 
+  },
+  deviceType: { 
+    type: String, 
+    required: true 
+  },
+  os: { type: String },
   browser: { type: String },
-  operatingSystem: { type: String },
-  lastUsed: { type: Date, default: Date.now },
   ipAddress: { type: String },
-  isTrusted: { type: Boolean, default: false },
-  userAgent: { type: String },
-  location: locationSchema
-});
-
-// Astrology User Profile Schema
-const astrologyUserProfileSchema = new Schema<AstrologyUserProfile>({
-  birthDate: { type: String },
-  birthTime: { type: String },
-  birthPlace: locationSchema,
-  sunSign: { type: String },
-  moonSign: { type: String },
-  ascendantSign: { type: String },
-  chartIds: [{ type: String }]
-}, { _id: false });
-
-// Business Profile Schema
-const businessProfileSchema = new Schema<BusinessProfile>({
-  businessName: { type: String },
-  incorporationDate: { type: String },
-  incorporationTime: { type: String },
-  incorporationPlace: locationSchema,
-  industry: { type: String },
-  size: { 
-    type: String, 
-    enum: ['startup', 'small', 'medium', 'large', 'enterprise'] 
+  lastUsed: { 
+    type: Date, 
+    default: Date.now 
   },
-  chartIds: [{ type: String }]
-});
-
-// Astrology Preferences Schema
-const astrologyPreferencesSchema = new Schema<AstrologyPreferences>({
-  preferredZodiacSystem: { 
-    type: String, 
-    enum: ['tropical', 'sidereal'] 
-  },
-  preferredHouseSystem: { type: String },
-  preferredAyanamsa: { type: String },
-  preferredChartStyle: { 
-    type: String, 
-    enum: ['western', 'vedic', 'modern'] 
-  },
-  includeAsteroids: { type: Boolean },
-  showTransits: { type: Boolean },
-  dailyHoroscopeEnabled: { type: Boolean, default: true },
-  weeklyHoroscopeEnabled: { type: Boolean, default: true },
-  monthlyHoroscopeEnabled: { type: Boolean, default: true },
-  yearlyHoroscopeEnabled: { type: Boolean, default: true },
-  transitAlertsEnabled: { type: Boolean, default: false },
-  retrogradeAlertsEnabled: { type: Boolean, default: false },
-  newMoonAlertsEnabled: { type: Boolean, default: false },
-  fullMoonAlertsEnabled: { type: Boolean, default: false }
-}, { _id: false });
-
-// Astrology Subscription Schema
-const astrologySubscriptionSchema = new Schema<AstrologySubscription>({
-  tier: { 
-    type: String, 
-    enum: Object.values(AstrologySubscriptionTier),
-    default: AstrologySubscriptionTier.FREE 
-  },
-  startDate: { type: Date, default: Date.now },
-  endDate: { type: Date },
-  autoRenew: { type: Boolean, default: false },
-  features: [{ type: String }],
-  aiChatCredits: { type: Number, default: 0 },
-  specialistConsultationCredits: { type: Number, default: 0 },
-  customReportCredits: { type: Number, default: 0 }
+  isTrusted: { 
+    type: Boolean, 
+    default: false 
+  }
 }, { _id: false });
 
 // Main User Schema
-const userSchema = new Schema<UserDocument>({
+const userSchema = new Schema<IUserDocument>({
   username: { 
     type: String, 
     required: true, 
@@ -166,67 +82,68 @@ const userSchema = new Schema<UserDocument>({
   password: { 
     type: String, 
     required: true,
-    select: false // Don't return password by default in queries
+    select: false
   },
-  firstName: { type: String, required: true },
-  lastName: { type: String, required: true },
-  phoneNumber: { type: String },
-  role: { 
+  firstName: { 
     type: String, 
-    enum: Object.values(UserRole),
-    default: UserRole.USER 
+    required: true,
+    trim: true
   },
-  permissions: [{ type: String }],
-  isActive: { type: Boolean, default: true },
-  isEmailVerified: { type: Boolean, default: false },
-  lastLogin: { type: Date },
-  avatar: { type: String },
+  lastName: { 
+    type: String, 
+    required: true,
+    trim: true
+  },
+  phoneNumber: { 
+    type: String,
+    trim: true
+  },
+  avatar: { 
+    type: String 
+  },
+  isActive: { 
+    type: Boolean, 
+    default: true 
+  },
+  isEmailVerified: { 
+    type: Boolean, 
+    default: false 
+  },
+  lastLogin: { 
+    type: Date 
+  },
+ roles: [{
+     type: mongoose.Schema.Types.ObjectId,
+     ref: 'RolePermission'
+   }],
   address: userAddressSchema,
-  metadata: { type: Map, of: Schema.Types.Mixed },
   preferences: { 
     type: userPreferencesSchema, 
-    default: () => ({
-      theme: ThemePreference.SYSTEM,
-      notifications: {
-        email: true,
-        push: false
-      }
-    })
+    default: () => ({}) 
   },
-  securityPreferences: { 
-    type: securityPreferencesSchema,
-    default: () => ({
-      twoFactorEnabled: false,
-      loginNotifications: true,
-      activityAlerts: true
-    })
-  },
-  devices: [userDeviceSchema],
-  
-  // Astrology-specific properties
-  astrologyProfile: astrologyUserProfileSchema,
-  businessProfiles: [businessProfileSchema],
-  astrologyPreferences: astrologyPreferencesSchema,
-  astrologySubscription: astrologySubscriptionSchema,
-  subscriptionId: { type: String }
+  devices: [userDeviceSchema]
 }, { 
-  timestamps: true, // Adds createdAt and updatedAt fields
-  versionKey: false // Don't include __v field
+  timestamps: true,
+  versionKey: false 
 });
 
+// Indexes
+userSchema.index({ email: 1 }, { unique: true });
+userSchema.index({ username: 1 }, { unique: true });
+userSchema.index({ isActive: 1 });
+userSchema.index({ createdAt: 1 });
+userSchema.index({ 'roles.role': 1 });
+userSchema.index({ 'roles.application': 1 });
+
+
 // Pre-save hook to hash password
-userSchema.pre('save', async function(next) {
-  // Only hash the password if it has been modified (or is new)
+userSchema.pre<IUserDocument>('save', async function(next) {
   if (!this.isModified('password')) return next();
   
   try {
-    // Generate a salt
     const salt = await bcrypt.genSalt(10);
-    // Hash the password along with the new salt
-    // Use get() method to access the password field
-    const password = this.get('password') as string;
-    // Use set() method to set the password field
-    this.set('password', await bcrypt.hash(password, salt));
+    const hashedPassword = await bcrypt.hash(this.password, salt);
+    this.password = hashedPassword;
     next();
   } catch (error) {
     next(error as Error);
@@ -234,16 +151,36 @@ userSchema.pre('save', async function(next) {
 });
 
 // Method to compare passwords
-userSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
-  try {
-    // @ts-ignore - this.password exists even though it's not in the interface
-    return await bcrypt.compare(candidatePassword, this.password);
-  } catch (error) {
-    throw error;
-  }
+userSchema.methods.comparePassword = async function(
+  this: IUserDocument,
+  candidatePassword: string
+): Promise<boolean> {
+  return bcrypt.compare(candidatePassword, this.password);
 };
 
+// Virtual for full name
+userSchema.virtual('fullName').get(function(this: IUser) {
+  return `${this.firstName} ${this.lastName}`;
+});
+
+// Ensure virtual fields are included when converting to JSON
+userSchema.set('toJSON', { 
+  virtuals: true,
+  transform: function(doc, ret) {
+    delete ret.password;
+    return ret;
+  }
+});
+
+userSchema.set('toObject', { 
+  virtuals: true,
+  transform: function(doc, ret) {
+    delete ret.password;
+    return ret;
+  }
+});
+
 // Create and export the model
-const UserModel = mongoose.model<UserDocument>('User', userSchema);
+const UserModel = model<IUserDocument>('User', userSchema);
 
 export default UserModel;

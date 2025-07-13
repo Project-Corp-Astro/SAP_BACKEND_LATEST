@@ -1,7 +1,8 @@
-import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
 import 'dotenv/config';
 import { createServiceLogger } from '../utils/sharedLogger';
+import { AuthUser } from '../../../../shared/types/auth-user'; // adjust path as needed
 
 // Initialize logger
 const logger = createServiceLogger('auth-middleware');
@@ -11,10 +12,9 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 // Define interfaces
 interface JwtPayload {
-  firstName: string;
   userId: string;
   email: string;
-  role: string;
+  rolePermissionIds?: string[];
   iat?: number;
   exp?: number;
 }
@@ -23,12 +23,7 @@ interface JwtPayload {
 declare global {
   namespace Express {
     interface Request {
-      user?: {
-        userId: string;
-        email: string;
-        role: string;
-        firstName: string;
-      };
+      user?: AuthUser;
     }
   }
 }
@@ -62,13 +57,16 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
     // Verify token
     const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
 
-    // Attach user info to request
+    // Attach user info to request with only the data we have in the token
     req.user = {
-      userId: decoded.userId,
+      _id: decoded.userId,
       email: decoded.email,
-      role: decoded.role,
-      firstName: decoded.firstName,
+      rolePermissionIds: decoded.rolePermissionIds || []
     };
+    
+    // Log the decoded token for debugging
+    logger.debug('Decoded JWT:', JSON.stringify(decoded, null, 2));
+    logger.debug('Attached user to request:', req.user);
 
     return next();
   } catch (error) {
@@ -81,24 +79,3 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
   }
 };
 
-/**
- * Role-based authorization middleware
- * @param roles - Array of allowed roles
- */
-export const roleAuthorization = (roles: string[]) => (req: Request, res: Response, next: NextFunction): Response | void => {
-  if (!req.user) {
-    return res.status(401).json({
-      success: false,
-      message: 'User not authenticated',
-    });
-  }
-
-  if (!roles.includes(req.user.role)) {
-    return res.status(403).json({
-      success: false,
-      message: 'Not authorized to access this resource',
-    });
-  }
-
-  return next();
-};

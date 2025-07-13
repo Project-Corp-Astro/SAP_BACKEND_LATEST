@@ -1,15 +1,25 @@
 import express, { Router, RequestHandler } from 'express';
-import { authMiddleware, roleAuthorization } from '../middlewares/auth.middleware';
+import { authMiddleware } from '../middlewares/auth.middleware';
 import * as contentController from '../controllers/content.controller';
+import { requireRemotePermission } from '@corp-astro/permission-client';
 
 const router: Router = express.Router();
 
+
+
+router.use(authMiddleware as RequestHandler);
 /**
  * @route GET /api/content
  * @desc Get all content with pagination and filtering
- * @access Public
+ * @access Private (super_admin, content_manager)
  */
-router.get('/', contentController.getAllContent as RequestHandler);
+router.get('/', 
+  requireRemotePermission(
+    'content:read', 
+    { application: 'cms',
+        allowSuperadmin: true
+    }) as RequestHandler,
+  contentController.getAllContent as RequestHandler);
 
 /**
  * @route POST /api/content
@@ -18,8 +28,11 @@ router.get('/', contentController.getAllContent as RequestHandler);
  */
 router.post(
   '/',
-  authMiddleware as RequestHandler,
-  roleAuthorization(['admin', 'content_manager']) as RequestHandler,
+  requireRemotePermission(
+    'content:create', 
+    { application: 'cms',
+        allowSuperadmin: true
+    }) as RequestHandler,
   contentController.createContent as RequestHandler,
 );
 
@@ -28,28 +41,52 @@ router.post(
  * @desc Get all articles
  * @access Public
  */
-router.get('/articles', contentController.getArticles as RequestHandler);
+router.get('/articles', 
+  requireRemotePermission(
+    'content:read', 
+    { application: 'cms',
+        allowSuperadmin: true
+    }) as RequestHandler,
+  contentController.getArticles as RequestHandler);
 
 /**
  * @route GET /api/content/categories
  * @desc Get all categories
  * @access Public
  */
-router.get('/categories', contentController.getAllCategories as RequestHandler);
+router.get('/categories',
+  requireRemotePermission(
+    'content:read', 
+    { application: 'cms',
+        allowSuperadmin: true
+    }) as RequestHandler,
+  contentController.getAllCategories as RequestHandler);
 
 /**
  * @route GET /api/content/slug/:slug
  * @desc Get content by slug
  * @access Public
  */
-router.get('/slug/:slug', contentController.getContentBySlug as RequestHandler);
+router.get('/slug/:slug', 
+  requireRemotePermission(
+    'content:read', 
+    { application: 'cms',
+        allowSuperadmin: true
+    }) as RequestHandler,
+  contentController.getContentBySlug as RequestHandler);
 
 /**
  * @route GET /api/content/:contentId
  * @desc Get content by ID
  * @access Public
  */
-router.get('/:contentId', contentController.getContentById as RequestHandler);
+router.get('/:contentId', 
+  requireRemotePermission(
+    'content:read', 
+    { application: 'cms',
+        allowSuperadmin: true
+    }) as RequestHandler,
+contentController.getContentById as RequestHandler);
 
 /**
  * @route PUT /api/content/:contentId
@@ -58,8 +95,11 @@ router.get('/:contentId', contentController.getContentById as RequestHandler);
  */
 router.put(
   '/:contentId',
-  authMiddleware as RequestHandler,
-  roleAuthorization(['admin', 'content_manager']) as RequestHandler,
+  requireRemotePermission(
+    'content:update', 
+    { application: 'cms',
+        allowSuperadmin: true
+    }) as RequestHandler,
   contentController.updateContent as RequestHandler,
 );
 
@@ -70,8 +110,11 @@ router.put(
  */
 router.delete(
   '/:contentId',
-  authMiddleware as RequestHandler,
-  roleAuthorization(['admin', 'content_manager']) as RequestHandler,
+  requireRemotePermission(
+    'content:delete', 
+    { application: 'cms',
+        allowSuperadmin: true
+    }) as RequestHandler,
   contentController.deleteContent as RequestHandler,
 );
 
@@ -82,8 +125,11 @@ router.delete(
  */
 router.patch(
   '/:contentId/status',
-  authMiddleware as RequestHandler,
-  roleAuthorization(['admin', 'content_manager']) as RequestHandler,
+  requireRemotePermission(
+    'content:update', 
+    { application: 'cms',
+        allowSuperadmin: true
+    }) as RequestHandler,
   contentController.updateContentStatus as RequestHandler,
 );
 
@@ -94,8 +140,11 @@ router.patch(
  */
 router.post(
   '/categories',
-  authMiddleware as RequestHandler,
-  roleAuthorization(['admin', 'content_manager']) as RequestHandler,
+  requireRemotePermission(
+    'content:create', 
+    { application: 'cms',
+        allowSuperadmin: true
+    }) as RequestHandler,
   contentController.createCategory as RequestHandler,
 );
 

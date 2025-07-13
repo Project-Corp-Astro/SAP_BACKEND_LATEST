@@ -10,9 +10,6 @@ import logger, { requestLogger, errorLogger } from './utils/logger';
 import { trackResponseTime, trackDatabasePerformance } from './middlewares/performance.middleware';
 import config from './config';
 import { redisUtils, contentCache, mediaCache, videoCache, categoryCache } from './utils/redis';
-
-// Logger is imported from ./utils/logger
-
 // Import routes
 import contentRoutes from './routes/content.routes';
 import mediaRoutes from './routes/media.routes';
@@ -130,7 +127,14 @@ const createAndStartServer = (port: number) => {
   });
   
   server.on('listening', () => {
-    logger.info(`Content Service running on port ${port} in ${config.env} mode`);
+    logger.info(`
+      ==============================================
+      Content Service Configuration
+      ==============================================
+      Service Port: ${port}
+      ==============================================
+      Health check available at http://localhost:${port}/health
+      `);
   });
   
   server.listen(port);

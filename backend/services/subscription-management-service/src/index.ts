@@ -21,10 +21,11 @@ import * as path from 'path';
 // Import routes
 import adminRoutes from './routes/admin.routes';
 import appRoutes from './routes/app.routes';
+import monitoringRoutes from './routes/monitoring.routes';
+import subscriptionAnalyticsRoutes from './routes/subscription-analytics.routes';
+import { errorHandler } from './middleware/error-handler';
 
-// Import middleware (to be created later)
-// import { authMiddleware } from './middlewares/auth.middleware';
-// import { validateRequest } from './middlewares/validation.middleware';
+
 
 // We import AppDataSource from our data-source file to avoid duplicate declarations
 
@@ -53,14 +54,14 @@ app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 // @ts-ignore: Express middleware type error
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-// Custom request logging middleware
-const customRequestLogger = (req: Request, res: Response, next: NextFunction): void => {
+// Configure request logging
+app.use((req: Request, res: Response, next: NextFunction) => {
   // Skip logging for health check routes
   if (req.originalUrl === '/health' || req.originalUrl === '/api/subscription/health') {
     return next();
   }
   
-  // Log request with timestamp
+  // Log request details
   const startTime = Date.now();
   
   // Log response when finished
@@ -68,20 +69,34 @@ const customRequestLogger = (req: Request, res: Response, next: NextFunction): v
     const responseTime = Date.now() - startTime;
     const message = `${req.method} ${req.originalUrl} ${res.statusCode} ${responseTime}ms`;
     
+    const logData = {
+      method: req.method,
+      url: req.originalUrl,
+      status: res.statusCode,
+      responseTime: `${responseTime}ms`,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      query: Object.keys(req.query).length > 0 ? req.query : undefined,
+      body: req.body && Object.keys(req.body).length > 0 ? req.body : undefined,
+      params: req.params && Object.keys(req.params).length > 0 ? req.params : undefined,
+      headers: {
+        'content-type': req.headers['content-type'],
+        authorization: req.headers.authorization ? '***' : undefined,
+        ...(req.headers['x-forwarded-for'] && { forwardedFor: req.headers['x-forwarded-for'] })
+      }
+    };
+    
     if (res.statusCode >= 500) {
-      logger.error(message, { path: req.path, query: req.query });
+      logger.error(message, logData);
     } else if (res.statusCode >= 400) {
-      logger.warn(message, { path: req.path });
+      logger.warn(message, logData);
     } else {
-      logger.info(message);
+      logger.info(message, logData);
     }
   });
   
   next();
-};
-
-// Apply the custom request logger middleware
-app.use(customRequestLogger as express.RequestHandler);
+});
 
 // Initialize service
 async function initializeService() {
@@ -165,58 +180,57 @@ async function initializeService() {
 // Routes setup
 app.use('/api/subscription/admin', adminRoutes);
 app.use('/api/subscription/app', appRoutes);
+app.use('/api/subscription/monitoring', monitoringRoutes);
+app.use('/api/subscription/analytics', subscriptionAnalyticsRoutes);
 
 // Health check route handler
 const handleHealthCheck = async (_req: Request, res: Response) => {
   try {
-    // Check database connectivity
-    const dbStatus = {
-      connected: false
-    };
-    
-    // Check Supabase connection
+    // Initialize connection statuses
+    const dbStatus = { connected: false, error: '' };
+    const redisStatus = { connected: false, error: '' };
+    const esStatus = { connected: false, error: '' };
+    const supabaseStatus = { connected: false, error: '' };
+
+    // Check database connectivity using TypeORM
     try {
-      dbStatus.connected = await checkSupabaseConnection();
+      // Test the connection by running a simple query
+      const connection = await AppDataSource.query('SELECT 1');
+      dbStatus.connected = true;
     } catch (error) {
       dbStatus.connected = false;
+      dbStatus.error = error instanceof Error ? error.message : 'Database connection failed';
     }
-    
+
     // Check Redis connectivity
-    const redisStatus = {
-      connected: false
-    };
-    
     try {
       redisStatus.connected = await redisUtils.pingRedis();
     } catch (error) {
-      redisStatus.connected = false;
+      redisStatus.error = error instanceof Error ? error.message : 'Connection failed';
     }
-    
+
     // Check Elasticsearch connectivity
-    const esStatus = {
-      connected: false
-    };
-    
     try {
       esStatus.connected = await checkElasticsearchConnection();
     } catch (error) {
-      esStatus.connected = false;
+      esStatus.error = error instanceof Error ? error.message : 'Connection failed';
     }
-    
+
     // Check Supabase connectivity
-    const supabaseStatus = {
-      connected: false
-    };
-    
     try {
       supabaseStatus.connected = await checkSupabaseConnection();
     } catch (error) {
-      supabaseStatus.connected = false;
+      supabaseStatus.error = error instanceof Error ? error.message : 'Connection failed';
     }
-    
-    // Return response with status of all connections
-    res.status(200).json({
-      status: 'OK',
+
+    // Determine overall status based on critical services
+    const criticalServices = [dbStatus, supabaseStatus];
+    const isHealthy = criticalServices.every(service => service.connected);
+    const status = isHealthy ? 'OK' : 'WARNING';
+
+    // Return response with detailed status
+    res.status(isHealthy ? 200 : 503).json({
+      status,
       service: config.serviceName,
       environment: config.env,
       timestamp: new Date().toISOString(),
@@ -226,6 +240,7 @@ const handleHealthCheck = async (_req: Request, res: Response) => {
         elasticsearch: esStatus,
         supabase: supabaseStatus,
       },
+      healthy: isHealthy
     });
   } catch (error: any) {
     logger.error('Health check error:', error);
@@ -233,12 +248,15 @@ const handleHealthCheck = async (_req: Request, res: Response) => {
       status: 'ERROR',
       message: error.message || 'Health check failed',
       timestamp: new Date().toISOString(),
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 };
 
 // Register health check routes
-app.get('/health', handleHealthCheck);
+app.get('/health', (req, res) => {
+  res.redirect('/api/subscription/monitoring/health');
+});
 app.get('/api/subscription/health', handleHealthCheck);
 
 // Setup Swagger documentation
@@ -266,24 +284,20 @@ app.get('/swagger.json', (req: Request, res: Response) => {
   res.send(swaggerSpec);
 });
 
-// Error handling middleware
-app.use(errorLoggerMiddleware);
-app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
-  logger.error('Unhandled error:', { error: err.message, stack: err.stack, path: req.path });
-  res.status(500).json({
-    success: false,
-    message: 'Internal Server Error',
-    error: config.env === 'development' ? err.message : undefined,
-  });
-  // No need to call next() since this is the final error handler
-});
+// Regular route handlers should be registered before these
 
-// Not found handler - should be the last non-error middleware
+// 404 handler - must be after all other route handlers but before error handlers
 app.use((req: Request, res: Response) => {
   res.status(404).json({
     success: false,
     message: `Route ${req.originalUrl} not found`,
   });
+});
+
+// Error handling middleware - must have 4 parameters to be recognized as an error handler
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  // Delegate to the error handler
+  errorHandler(err, req, res, next);
 });
 
 // Start server

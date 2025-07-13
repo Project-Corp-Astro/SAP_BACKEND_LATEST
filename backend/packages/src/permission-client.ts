@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { Request, Response, NextFunction } from 'express';
 
+<<<<<<< HEAD
 const USER_SERVICE_PERMISSION_API_URL = process.env.USER_SERVICE_PERMISSION_API_URL || 'http://localhost:3002';
 
 interface AuthenticatedUser {
@@ -16,6 +17,9 @@ declare global {
   }
 }
 
+=======
+const USER_SERVICE_PERMISSION_API_URL = process.env.USER_SERVICE_PERMISSION_API_URL || 'http://localhost:3000';
+>>>>>>> 31-rbac-implementation
 /**
  * Middleware to require a specific permission (checked via remote user service)
  */
@@ -30,11 +34,19 @@ export function requireRemotePermission(
 
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
+<<<<<<< HEAD
       if (!req.user || !req.user._id) {
         return res.status(401).json({ success: false, message: 'Authentication required' });
       }
 
       const response = await axios.post(`${USER_SERVICE_PERMISSION_API_URL}/api/roles/check-permission`, {
+=======
+    //   if (!req.user || !req.user._id) {
+    //     return res.status(401).json({ success: false, message: 'Authentication required' });
+    //   }
+
+      const response = await axios.post(USER_SERVICE_PERMISSION_API_URL, {
+>>>>>>> 31-rbac-implementation
         permission,
         application,
         allowSuperadmin
@@ -76,12 +88,21 @@ export function requireRemoteAnyPermission(
 
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
+<<<<<<< HEAD
       if (!req.user || !req.user._id) {
         return res.status(401).json({ success: false, message: 'Authentication required' });
       }
 
       for (const permission of permissions) {
         const response = await axios.post(`${USER_SERVICE_PERMISSION_API_URL}/api/roles/check-permission`, {
+=======
+    //   if (!req.user || !req.user._id) {
+    //     return res.status(401).json({ success: false, message: 'Authentication required' });
+    //   }
+
+      for (const permission of permissions) {
+        const response = await axios.post(USER_SERVICE_PERMISSION_API_URL, {
+>>>>>>> 31-rbac-implementation
           permission,
           application,
           allowSuperadmin
