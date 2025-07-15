@@ -1,13 +1,18 @@
 # ============================================================================
 # Module 2: Database Monitoring and Alerting Configuration
 # ============================================================================
-# Purpose: Comprehensive monitoring for Cloud SQL, Redis, and MongoDB
+# Purpose: Monitoring for Redis (GCP) and MongoDB (Atlas) - No PostgreSQL
+# Architecture: Supabase for subscriptions, MongoDB for auth/user/content
 # Zero-Tolerance Policy: Monitor all critical database metrics
 # Mathematical Precision: Calculated thresholds based on instance capacity
 # ============================================================================
 
 # ============================================================================
-# PostgreSQL Monitoring
+# Redis Monitoring (Primary Database Monitoring)
+# ============================================================================
+# Note: PostgreSQL monitoring removed - using Supabase (external)
+# MongoDB monitoring handled by Atlas (external)
+# Focus: Redis cache monitoring for optimal performance
 # ============================================================================
 
 # PostgreSQL Database Instance Monitoring
@@ -54,7 +59,7 @@ resource "google_monitoring_alert_policy" "postgres_high_connections" {
     
     condition_threshold {
       filter          = "resource.type=\"cloudsql_database\" AND metric.type=\"cloudsql.googleapis.com/database/network/connections\""
-      comparison      = "COMPARISON_GREATER_THAN"
+      comparison      = "COMPARISON_GT"
       threshold_value = var.environment == "production" ? 160 : 80  # 80% of max connections
       duration        = "300s"  # 5 minutes
       
@@ -83,7 +88,7 @@ resource "google_monitoring_alert_policy" "postgres_high_cpu" {
     
     condition_threshold {
       filter          = "resource.type=\"cloudsql_database\" AND metric.type=\"cloudsql.googleapis.com/database/cpu/utilization\""
-      comparison      = "COMPARISON_GREATER_THAN"
+      comparison      = "COMPARISON_GT"
       threshold_value = 0.8  # 80%
       duration        = "600s"  # 10 minutes
       
@@ -112,7 +117,7 @@ resource "google_monitoring_alert_policy" "postgres_high_memory" {
     
     condition_threshold {
       filter          = "resource.type=\"cloudsql_database\" AND metric.type=\"cloudsql.googleapis.com/database/memory/utilization\""
-      comparison      = "COMPARISON_GREATER_THAN"
+      comparison      = "COMPARISON_GT"
       threshold_value = 0.85  # 85%
       duration        = "600s"  # 10 minutes
       
@@ -141,7 +146,7 @@ resource "google_monitoring_alert_policy" "postgres_high_disk" {
     
     condition_threshold {
       filter          = "resource.type=\"cloudsql_database\" AND metric.type=\"cloudsql.googleapis.com/database/disk/utilization\""
-      comparison      = "COMPARISON_GREATER_THAN"
+      comparison      = "COMPARISON_GT"
       threshold_value = 0.8  # 80%
       duration        = "300s"  # 5 minutes
       
@@ -172,7 +177,7 @@ resource "google_monitoring_alert_policy" "postgres_replication_lag" {
     
     condition_threshold {
       filter          = "resource.type=\"cloudsql_database\" AND metric.type=\"cloudsql.googleapis.com/database/replication/replica_lag\""
-      comparison      = "COMPARISON_GREATER_THAN"
+      comparison      = "COMPARISON_GT"
       threshold_value = 30  # 30 seconds
       duration        = "300s"  # 5 minutes
       
@@ -238,7 +243,7 @@ resource "google_monitoring_alert_policy" "redis_high_memory" {
     
     condition_threshold {
       filter          = "resource.type=\"redis_instance\" AND metric.type=\"redis.googleapis.com/stats/memory/usage_ratio\""
-      comparison      = "COMPARISON_GREATER_THAN"
+      comparison      = "COMPARISON_GT"
       threshold_value = 0.85  # 85%
       duration        = "300s"  # 5 minutes
       
@@ -267,7 +272,7 @@ resource "google_monitoring_alert_policy" "redis_high_connections" {
     
     condition_threshold {
       filter          = "resource.type=\"redis_instance\" AND metric.type=\"redis.googleapis.com/stats/connections/clients\""
-      comparison      = "COMPARISON_GREATER_THAN"
+      comparison      = "COMPARISON_GT"
       threshold_value = var.environment == "production" ? 800 : 400  # Based on instance capacity
       duration        = "300s"  # 5 minutes
       
@@ -296,7 +301,7 @@ resource "google_monitoring_alert_policy" "redis_high_cpu" {
     
     condition_threshold {
       filter          = "resource.type=\"redis_instance\" AND metric.type=\"redis.googleapis.com/stats/cpu_utilization\""
-      comparison      = "COMPARISON_GREATER_THAN"
+      comparison      = "COMPARISON_GT"
       threshold_value = 0.8  # 80%
       duration        = "600s"  # 10 minutes
       
@@ -329,7 +334,7 @@ resource "google_monitoring_alert_policy" "postgres_slow_queries" {
     
     condition_threshold {
       filter          = "resource.type=\"cloudsql_database\" AND metric.type=\"cloudsql.googleapis.com/database/postgresql/num_backends\""
-      comparison      = "COMPARISON_GREATER_THAN"
+      comparison      = "COMPARISON_GT"
       threshold_value = var.environment == "production" ? 50 : 25  # Concurrent queries
       duration        = "300s"  # 5 minutes
       
@@ -358,7 +363,7 @@ resource "google_monitoring_alert_policy" "redis_high_ops_rate" {
     
     condition_threshold {
       filter          = "resource.type=\"redis_instance\" AND metric.type=\"redis.googleapis.com/stats/operations/total\""
-      comparison      = "COMPARISON_GREATER_THAN"
+      comparison      = "COMPARISON_GT"
       threshold_value = var.environment == "production" ? 10000 : 5000  # ops/second
       duration        = "300s"  # 5 minutes
       
@@ -389,7 +394,7 @@ resource "google_monitoring_alert_policy" "postgres_backup_failure" {
   conditions {
     display_name = "PostgreSQL backup failed"
     
-    condition_absence {
+    condition_absent {
       filter          = "resource.type=\"cloudsql_database\" AND metric.type=\"cloudsql.googleapis.com/database/backup/backup_count\""
       duration        = "86400s"  # 24 hours
       
@@ -422,7 +427,7 @@ resource "google_monitoring_alert_policy" "postgres_auth_failures" {
     
     condition_threshold {
       filter          = "resource.type=\"cloudsql_database\" AND metric.type=\"cloudsql.googleapis.com/database/authentication/failure_count\""
-      comparison      = "COMPARISON_GREATER_THAN"
+      comparison      = "COMPARISON_GT"
       threshold_value = 10  # 10 failures in 5 minutes
       duration        = "300s"  # 5 minutes
       

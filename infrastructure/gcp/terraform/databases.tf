@@ -1,22 +1,27 @@
 # ============================================================================
 # Module 2: Database Infrastructure Configuration
 # ============================================================================
-# Purpose: GCP Cloud SQL (PostgreSQL), Memorystore (Redis), and MongoDB Atlas
+# Purpose: Redis for caching + MongoDB Atlas support (Supabase for subscriptions)
+# Architecture: Supabase (subscriptions), MongoDB (auth/user/content), Redis (cache)
 # Zero-Tolerance Policy: All operations must pass validation before deployment
 # Mathematical Precision: Calculated timeouts, connection limits, and capacity
 # ============================================================================
 
 # ============================================================================
-# Cloud SQL - PostgreSQL Primary Database
+# Cloud SQL - PostgreSQL Primary Database (CONDITIONAL - using Supabase instead)
 # ============================================================================
+
+# Note: PostgreSQL disabled in favor of Supabase for subscriptions service
+# Keeping configuration for potential future use or migration scenarios
 
 # Random suffix for unique naming
 resource "random_id" "db_name_suffix" {
   byte_length = 4
 }
 
-# Cloud SQL PostgreSQL Instance
+# Cloud SQL PostgreSQL Instance (DISABLED - using Supabase)
 resource "google_sql_database_instance" "postgresql_primary" {
+  count = var.enable_cloud_sql ? 1 : 0  # Conditional creation
   name             = "${var.environment}-sap-postgres-${random_id.db_name_suffix.hex}"
   database_version = var.postgres_version
   region          = var.region
@@ -138,18 +143,7 @@ resource "google_sql_database_instance" "postgresql_primary" {
     google_service_networking_connection.private_vpc_connection,
     google_compute_network.vpc_network
   ]
-
-  # Resource labels for cost tracking and management
-  labels = {
-    environment = var.environment
-    service     = "sap-backend"
-    component   = "database"
-    module      = "module-2"
-    tier        = "primary"
-    managed_by  = "terraform"
-    backup      = "enabled"
-    monitoring  = "enabled"
-  }
+}
 }
 
 # ============================================================================

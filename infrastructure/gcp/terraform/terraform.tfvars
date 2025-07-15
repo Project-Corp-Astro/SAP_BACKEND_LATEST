@@ -53,10 +53,14 @@ node_pool_initial_count   = 1                # Single node start
 # =================================================================
 # DATABASE CONFIGURATION (TESTING - Minimal)
 # =================================================================
-enable_cloud_sql      = false               # Disable for Module 1 testing
-cloud_sql_tier        = "db-f1-micro"       # Smallest tier for testing
-enable_redis          = false               # Disable for Module 1 testing
-redis_memory_size_gb  = 1                   # Minimum size
+enable_cloud_sql      = false               # Use Supabase for subscriptions
+cloud_sql_tier        = "db-f1-micro"       # Not used (Supabase external)
+enable_redis          = true                # Enable Redis for caching
+redis_memory_size_gb  = 1                   # Minimum size for testing
+
+# MongoDB Configuration (for auth, user, content services)
+mongodb_database_name = "sap_backend"
+mongodb_username     = "sap_user"
 
 # =================================================================
 # MONITORING & LOGGING (TESTING - Basic)
