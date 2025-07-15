@@ -373,9 +373,9 @@ resource "google_kms_crypto_key" "database_key" {
 
   rotation_period = var.environment == "production" ? "7776000s" : "31536000s" # 90 days for prod, 1 year for others
 
-  lifecycle {
-    prevent_destroy = true
-  }
+  # lifecycle {
+  #   prevent_destroy = true
+  # }
 
   labels = {
     environment = var.environment
