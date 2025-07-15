@@ -15,8 +15,9 @@
 # Focus: Redis cache monitoring for optimal performance
 # ============================================================================
 
-# PostgreSQL Database Instance Monitoring
+# PostgreSQL Database Instance Monitoring (CONDITIONAL)
 resource "google_monitoring_alert_policy" "postgres_instance_down" {
+  count        = var.enable_monitoring && var.enable_cloud_sql ? 1 : 0
   display_name = "${var.environment}-postgres-instance-down"
   project      = var.project_id
   combiner     = "OR"
@@ -25,7 +26,7 @@ resource "google_monitoring_alert_policy" "postgres_instance_down" {
     display_name = "PostgreSQL instance is down"
     
     condition_threshold {
-      filter          = "resource.type=\"cloudsql_database\" AND resource.labels.database_id=\"${var.project_id}:${google_sql_database_instance.postgresql_primary.name}\""
+      filter          = "resource.type=\"cloudsql_database\" AND resource.labels.database_id=\"${var.project_id}:${google_sql_database_instance.postgresql_primary[0].name}\""
       comparison      = "COMPARISON_LESS_THAN"
       threshold_value = 1
       duration        = "60s"
@@ -48,8 +49,9 @@ resource "google_monitoring_alert_policy" "postgres_instance_down" {
   }
 }
 
-# PostgreSQL Connection Count Alert
+# PostgreSQL Connection Count Alert (CONDITIONAL)
 resource "google_monitoring_alert_policy" "postgres_high_connections" {
+  count        = var.enable_monitoring && var.enable_cloud_sql ? 1 : 0
   display_name = "${var.environment}-postgres-high-connections"
   project      = var.project_id
   combiner     = "OR"
@@ -199,8 +201,9 @@ resource "google_monitoring_alert_policy" "postgres_replication_lag" {
 # Redis Monitoring
 # ============================================================================
 
-# Redis Instance Down Alert
+# Redis Instance Down Alert (CONDITIONAL)
 resource "google_monitoring_alert_policy" "redis_instance_down" {
+  count        = var.enable_monitoring && var.enable_redis ? 1 : 0
   display_name = "${var.environment}-redis-instance-down"
   project      = var.project_id
   combiner     = "OR"
@@ -209,7 +212,7 @@ resource "google_monitoring_alert_policy" "redis_instance_down" {
     display_name = "Redis instance is down"
     
     condition_threshold {
-      filter          = "resource.type=\"redis_instance\" AND resource.labels.instance_id=\"${google_redis_instance.main_cache.name}\""
+      filter          = "resource.type=\"redis_instance\" AND resource.labels.instance_id=\"${google_redis_instance.main_cache[0].name}\""
       comparison      = "COMPARISON_LESS_THAN"
       threshold_value = 1
       duration        = "60s"

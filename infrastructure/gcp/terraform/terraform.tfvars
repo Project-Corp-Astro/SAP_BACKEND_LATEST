@@ -65,7 +65,7 @@ mongodb_username     = "sap_user"
 # =================================================================
 # MONITORING & LOGGING (TESTING - Basic)
 # =================================================================
-enable_monitoring     = true   # Keep monitoring for validation
+enable_monitoring     = false  # Disable complex monitoring for faster deployment
 enable_logging        = true   # Keep logging for debugging
 log_retention_days    = 7      # Shorter retention for testing
 
