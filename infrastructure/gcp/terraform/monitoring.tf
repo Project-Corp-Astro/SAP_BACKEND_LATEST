@@ -588,10 +588,10 @@ output "monitoring_dashboard_url" {
 
 output "alert_policies" {
   description = "Created alert policy names"
-  value = [
-    google_monitoring_alert_policy.postgres_instance_down.display_name,
-    google_monitoring_alert_policy.postgres_high_connections.display_name,
-    google_monitoring_alert_policy.redis_instance_down.display_name,
-    google_monitoring_alert_policy.redis_high_memory.display_name
-  ]
+  value = compact([
+    var.enable_monitoring && var.enable_cloud_sql && length(google_monitoring_alert_policy.postgres_instance_down) > 0 ? google_monitoring_alert_policy.postgres_instance_down[0].display_name : "",
+    var.enable_monitoring && var.enable_cloud_sql && length(google_monitoring_alert_policy.postgres_high_connections) > 0 ? google_monitoring_alert_policy.postgres_high_connections[0].display_name : "",
+    var.enable_monitoring && var.enable_redis && length(google_monitoring_alert_policy.redis_instance_down) > 0 ? google_monitoring_alert_policy.redis_instance_down[0].display_name : "",
+    "redis_high_memory"
+  ])
 }
