@@ -105,7 +105,6 @@ resource "google_container_cluster" "primary" {
         disk_size    = var.node_pool_disk_size_gb
         disk_type    = var.node_pool_disk_type
         image_type   = "COS_CONTAINERD"
-        machine_type = var.node_pool_machine_type
         
         management {
           auto_repair  = true

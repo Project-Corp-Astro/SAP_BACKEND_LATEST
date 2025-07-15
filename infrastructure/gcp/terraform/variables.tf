@@ -3,6 +3,28 @@
 # Zero-Tolerance: Invalid inputs will cause immediate failure
 
 # =================================================================
+# ENVIRONMENT CONFIGURATION
+# =================================================================
+variable "environment" {
+  description = "Environment name (development, staging, production)"
+  type        = string
+  default     = "production"
+  
+  validation {
+    condition = contains([
+      "development", "staging", "production", "testing"
+    ], var.environment)
+    error_message = "Environment must be one of: development, staging, production, testing."
+  }
+}
+
+variable "enable_redis" {
+  description = "Enable Redis Memorystore instance"
+  type        = bool
+  default     = true
+}
+
+# =================================================================
 # PROJECT CONFIGURATION
 # =================================================================
 variable "project_id" {
