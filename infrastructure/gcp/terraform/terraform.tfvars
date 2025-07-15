@@ -18,6 +18,11 @@ region = "asia-south1"    # Mumbai region
 zone   = "asia-south1-a"  # Primary zone in Mumbai
 
 # =================================================================
+# ENVIRONMENT CONFIGURATION
+# =================================================================
+environment = "testing"   # Environment type for validation
+
+# =================================================================
 # NETWORKING CONFIGURATION (TESTING - Smaller ranges)
 # =================================================================
 gke_subnet_cidr         = "10.0.0.0/22"    # Smaller subnet for testing: 1,022 IPs
