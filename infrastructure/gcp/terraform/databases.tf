@@ -503,7 +503,7 @@ resource "google_monitoring_uptime_check_config" "postgres_uptime" {
 
 # Redis monitoring (conditional) - Simplified for Memorystore
 # Note: Memorystore Redis is automatically monitored by GCP
-# Custom uptime checks are not required for managed Redis instances
+# Using a more specific metric filter for memory utilization
 resource "google_monitoring_alert_policy" "redis_memory_utilization" {
   count        = var.enable_redis ? 1 : 0
   display_name = "${var.environment}-redis-memory-alert"
@@ -513,14 +513,16 @@ resource "google_monitoring_alert_policy" "redis_memory_utilization" {
   conditions {
     display_name = "Redis Memory Utilization High"
     condition_threshold {
-      filter          = "resource.type=\"redis_instance\" AND resource.label.instance_id=\"${google_redis_instance.main_cache[0].name}\""
+      filter          = "resource.type=\"redis_instance\" AND metric.type=\"redis.googleapis.com/stats/memory/usage_ratio\" AND resource.label.instance_id=\"${google_redis_instance.main_cache[0].name}\""
       comparison      = "COMPARISON_GT"
       threshold_value = 0.8
       duration        = "300s"
       
       aggregations {
-        alignment_period   = "60s"
-        per_series_aligner = "ALIGN_MEAN"
+        alignment_period     = "60s"
+        per_series_aligner   = "ALIGN_MEAN"
+        cross_series_reducer = "REDUCE_MEAN"
+        group_by_fields      = ["resource.label.instance_id"]
       }
     }
   }

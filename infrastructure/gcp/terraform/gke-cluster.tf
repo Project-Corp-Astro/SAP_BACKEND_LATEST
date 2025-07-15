@@ -72,13 +72,8 @@ resource "google_container_cluster" "primary" {
       disabled = false
     }
     
-    # Remove conflicting addons for Autopilot mode
-    # network_policy_config, dns_cache_config, gcp_filestore_csi_driver_config
-    # are automatically managed by Autopilot
-    
-    gcs_fuse_csi_driver_config {
-      enabled = true
-    }
+    # Note: All other addons are automatically managed by Autopilot
+    # Including: network_policy_config, dns_cache_config, gcp_filestore_csi_driver_config
   }
 
   # Security configuration (Autopilot compatible)
