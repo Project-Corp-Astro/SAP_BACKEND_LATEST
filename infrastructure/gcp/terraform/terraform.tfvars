@@ -132,6 +132,4 @@ redis_version       = "REDIS_7_0"
 
 # MongoDB Configuration (Atlas)
 mongodb_connection_string = "mongodb+srv://username:password@your-cluster.mongodb.net/sap_backend?retryWrites=true&w=majority"  # 🚨 UPDATE REQUIRED: Add your MongoDB Atlas connection string
-mongodb_database_name     = "sap_mongodb"
-mongodb_username         = "sap_user"
 mongodb_password         = "SecureMongo2025!"  # 🚨 UPDATE REQUIRED: Add your MongoDB password
