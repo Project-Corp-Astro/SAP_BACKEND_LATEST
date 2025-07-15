@@ -12,6 +12,10 @@ resource "google_container_cluster" "primary" {
 
   # Enable Autopilot for fully managed experience
   enable_autopilot = var.enable_autopilot
+  
+  # Required for Autopilot clusters
+  remove_default_node_pool = var.enable_autopilot ? true : false
+  initial_node_count       = var.enable_autopilot ? 1 : null
 
   # Network configuration
   network    = google_compute_network.vpc_network.self_link
