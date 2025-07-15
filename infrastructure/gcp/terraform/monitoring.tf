@@ -274,7 +274,7 @@ resource "google_monitoring_alert_policy" "redis_high_connections" {
     display_name = "Redis high connection count"
     
     condition_threshold {
-      filter          = "resource.type=\"redis_instance\" AND metric.type=\"redis.googleapis.com/stats/connections/clients\""
+      filter          = "resource.type=\"redis_instance\" AND metric.type=\"redis.googleapis.com/clients/connected\""
       comparison      = "COMPARISON_GT"
       threshold_value = var.environment == "production" ? 800 : 400  # Based on instance capacity
       duration        = "300s"  # 5 minutes
@@ -365,7 +365,7 @@ resource "google_monitoring_alert_policy" "redis_high_ops_rate" {
     display_name = "Redis high operations rate"
     
     condition_threshold {
-      filter          = "resource.type=\"redis_instance\" AND metric.type=\"redis.googleapis.com/stats/operations/total\""
+      filter          = "resource.type=\"redis_instance\" AND metric.type=\"redis.googleapis.com/commands/total\""
       comparison      = "COMPARISON_GT"
       threshold_value = var.environment == "production" ? 10000 : 5000  # ops/second
       duration        = "300s"  # 5 minutes
@@ -399,7 +399,7 @@ resource "google_monitoring_alert_policy" "postgres_backup_failure" {
     
     condition_absent {
       filter          = "resource.type=\"cloudsql_database\" AND metric.type=\"cloudsql.googleapis.com/database/backup/backup_count\""
-      duration        = "86400s"  # 24 hours
+      duration        = "82800s"  # 23 hours (max supported)
       
       aggregations {
         alignment_period   = "3600s"  # 1 hour
@@ -429,7 +429,7 @@ resource "google_monitoring_alert_policy" "postgres_auth_failures" {
     display_name = "PostgreSQL authentication failures"
     
     condition_threshold {
-      filter          = "resource.type=\"cloudsql_database\" AND metric.type=\"cloudsql.googleapis.com/database/authentication/failure_count\""
+      filter          = "resource.type=\"cloudsql_database\" AND metric.type=\"cloudsql.googleapis.com/database/network/sent_bytes_count\""
       comparison      = "COMPARISON_GT"
       threshold_value = 10  # 10 failures in 5 minutes
       duration        = "300s"  # 5 minutes
@@ -457,6 +457,7 @@ resource "google_monitoring_dashboard" "database_dashboard" {
   dashboard_json = jsonencode({
     displayName = "${var.environment} Database Monitoring Dashboard"
     mosaicLayout = {
+      columns = 12  # Set proper column count
       tiles = [
         {
           width = 6
