@@ -1,0 +1,106 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sap-backend-applications
+  namespace: argocd
+  labels:
+    managed-by: module-10-cicd
+spec:
+  project: sap-backend
+  source:
+    repoURL: https://github.com/Project-Corp-Astro/SAP_BACKEND_LATEST-gitops
+    targetRevision: HEAD
+    path: applications
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+    - CreateNamespace=true
+    - PrunePropagationPolicy=foreground
+    - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+---
+# Development Environment Application
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sap-backend-development
+  namespace: argocd
+  labels:
+    managed-by: module-10-cicd
+    environment: development
+spec:
+  project: sap-backend
+  source:
+    repoURL: https://github.com/Project-Corp-Astro/SAP_BACKEND_LATEST-gitops
+    targetRevision: HEAD
+    path: overlays/development
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: sap-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+    - ApplyOutOfSyncOnly=true
+  revisionHistoryLimit: 10
+---
+# Staging Environment Application
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sap-backend-staging
+  namespace: argocd
+  labels:
+    managed-by: module-10-cicd
+    environment: staging
+spec:
+  project: sap-backend
+  source:
+    repoURL: https://github.com/Project-Corp-Astro/SAP_BACKEND_LATEST-gitops
+    targetRevision: HEAD
+    path: overlays/staging
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: sap-staging
+  syncPolicy:
+    syncOptions:
+    - CreateNamespace=true
+    - ApplyOutOfSyncOnly=true
+  revisionHistoryLimit: 10
+---
+# Production Environment Application
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sap-backend-production
+  namespace: argocd
+  labels:
+    managed-by: module-10-cicd
+    environment: production
+spec:
+  project: sap-backend
+  source:
+    repoURL: https://github.com/Project-Corp-Astro/SAP_BACKEND_LATEST-gitops
+    targetRevision: HEAD
+    path: overlays/production
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: sap-prod
+  syncPolicy:
+    syncOptions:
+    - CreateNamespace=true
+    - ApplyOutOfSyncOnly=true
+  revisionHistoryLimit: 10

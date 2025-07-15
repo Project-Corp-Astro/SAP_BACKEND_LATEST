@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sap-staging
+  labels:
+    environment: staging
+    team: sap-backend
+    managed-by: kubernetes
+    pod-security.kubernetes.io/enforce: baseline
+  annotations:
+    description: "SAP Backend Staging Environment"
+    contact: "team@sap-backend.com"
+    created-by: "kubernetes-orchestration-module-7"
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: sap-staging-quota
+  namespace: sap-staging
+spec:
+  hard:
+    requests.cpu: "10"
+    requests.memory: 20Gi
+    limits.cpu: "20"
+    limits.memory: 40Gi
+    persistentvolumeclaims: "10"
+    services: "15"
+    secrets: "50"
+    configmaps: "50"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: sap-staging-limits
+  namespace: sap-staging
+spec:
+  limits:
+  - default:
+      cpu: "500m"
+      memory: "1Gi"
+    defaultRequest:
+      cpu: "100m"
+      memory: "256Mi"
+    max:
+      cpu: "4"
+      memory: "8Gi"
+    min:
+      cpu: "50m"
+      memory: "128Mi"
+    type: Container

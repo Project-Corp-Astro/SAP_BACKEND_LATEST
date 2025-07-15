@@ -1,0 +1,444 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "SAP Backend System Overview",
+    "description": "Comprehensive overview of SAP Backend system performance and health",
+    "tags": ["sap-backend", "overview", "module-11"],
+    "style": "dark",
+    "timezone": "browser",
+    "editable": true,
+    "graphTooltip": 1,
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h"],
+      "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d"]
+    },
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Service Health Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=\"sap-backend-services\"}",
+            "legendFormat": "{{ kubernetes_name }}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "options": {
+                  "0": {
+                    "text": "DOWN",
+                    "color": "red"
+                  },
+                  "1": {
+                    "text": "UP",
+                    "color": "green"
+                  }
+                },
+                "type": "value"
+              }
+            ],
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "red",
+                  "value": null
+                },
+                {
+                  "color": "green",
+                  "value": 1
+                }
+              ]
+            },
+            "unit": "none"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "Request Rate (req/sec)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum by (service) (rate(sap_backend_http_requests_total[5m]))",
+            "legendFormat": "{{ service }}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Requests/sec",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "Error Rate (%)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum by (service) (rate(sap_backend_http_requests_total{status_code=~\"5..\"}[5m])) / sum by (service) (rate(sap_backend_http_requests_total[5m])) * 100",
+            "legendFormat": "{{ service }}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Error Rate %",
+            "min": 0,
+            "max": 100
+          }
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [5],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A", "5m", "now"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "avg"
+              },
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "for": "5m",
+          "frequency": "10s",
+          "handler": 1,
+          "name": "High Error Rate Alert",
+          "noDataState": "no_data",
+          "notifications": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 8
+        }
+      },
+      {
+        "id": 4,
+        "title": "Response Time P95 (ms)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum by (service, le) (rate(sap_backend_http_request_duration_ms_bucket[5m])))",
+            "legendFormat": "{{ service }} P95",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum by (service, le) (rate(sap_backend_http_request_duration_ms_bucket[5m])))",
+            "legendFormat": "{{ service }} P99",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Milliseconds",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 8
+        }
+      },
+      {
+        "id": 5,
+        "title": "Active Connections",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sap_backend_active_connections",
+            "legendFormat": "{{ service }} {{ type }}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Connections",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 16
+        }
+      },
+      {
+        "id": 6,
+        "title": "Cache Hit Rate (%)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sap_backend_cache_hit_rate * 100",
+            "legendFormat": "{{ service }} {{ cache_type }}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Hit Rate %",
+            "min": 0,
+            "max": 100
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 16
+        }
+      },
+      {
+        "id": 7,
+        "title": "Database Connections",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sap_backend_database_connections{status=\"active\"}",
+            "legendFormat": "{{ database }} Active",
+            "refId": "A"
+          },
+          {
+            "expr": "sap_backend_database_connections{status=\"idle\"}",
+            "legendFormat": "{{ database }} Idle",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Connections",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 24
+        }
+      },
+      {
+        "id": 8,
+        "title": "User Activity",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(sap_backend_user_registrations_total[1h]) * 3600",
+            "legendFormat": "Registrations/hour",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(sap_backend_user_logins_total[5m]) * 300",
+            "legendFormat": "Logins/5min",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Events",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 24
+        }
+      },
+      {
+        "id": 9,
+        "title": "Business Metrics",
+        "type": "singlestat",
+        "targets": [
+          {
+            "expr": "sum(sap_backend_content_views_total)",
+            "refId": "A"
+          }
+        ],
+        "valueName": "current",
+        "format": "short",
+        "prefix": "Total Content Views: ",
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 0,
+          "y": 32
+        }
+      },
+      {
+        "id": 10,
+        "title": "Subscription Events",
+        "type": "singlestat",
+        "targets": [
+          {
+            "expr": "sum(sap_backend_subscription_events_total)",
+            "refId": "A"
+          }
+        ],
+        "valueName": "current",
+        "format": "short",
+        "prefix": "Total Subscriptions: ",
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 6,
+          "y": 32
+        }
+      },
+      {
+        "id": 11,
+        "title": "Login Success Rate",
+        "type": "singlestat",
+        "targets": [
+          {
+            "expr": "rate(sap_backend_user_logins_total{success=\"true\"}[5m]) / rate(sap_backend_user_logins_total[5m]) * 100",
+            "refId": "A"
+          }
+        ],
+        "valueName": "current",
+        "format": "percent",
+        "suffix": "%",
+        "thresholds": "90,95",
+        "colorValue": true,
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 12,
+          "y": 32
+        }
+      },
+      {
+        "id": 12,
+        "title": "System Uptime",
+        "type": "singlestat",
+        "targets": [
+          {
+            "expr": "avg(up{job=\"sap-backend-services\"}) * 100",
+            "refId": "A"
+          }
+        ],
+        "valueName": "current",
+        "format": "percent",
+        "suffix": "%",
+        "thresholds": "95,99",
+        "colorValue": true,
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 18,
+          "y": 32
+        }
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "allValue": null,
+          "current": {
+            "text": "All",
+            "value": "$__all"
+          },
+          "datasource": "Prometheus",
+          "definition": "label_values(sap_backend_http_requests_total, service)",
+          "hide": 0,
+          "includeAll": true,
+          "label": "Service",
+          "multi": true,
+          "name": "service",
+          "options": [],
+          "query": "label_values(sap_backend_http_requests_total, service)",
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 1,
+          "tagValuesQuery": "",
+          "tags": [],
+          "tagsQuery": "",
+          "type": "query",
+          "useTags": false
+        },
+        {
+          "allValue": null,
+          "current": {
+            "text": "All",
+            "value": "$__all"
+          },
+          "datasource": "Prometheus",
+          "definition": "label_values(sap_backend_http_requests_total, environment)",
+          "hide": 0,
+          "includeAll": true,
+          "label": "Environment",
+          "multi": true,
+          "name": "environment",
+          "options": [],
+          "query": "label_values(sap_backend_http_requests_total, environment)",
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 1,
+          "type": "query",
+          "useTags": false
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "builtIn": 1,
+          "datasource": "-- Grafana --",
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "type": "dashboard"
+        }
+      ]
+    },
+    "links": [
+      {
+        "icon": "external link",
+        "tags": [],
+        "title": "SAP Backend Documentation",
+        "tooltip": "View system documentation",
+        "type": "link",
+        "url": "https://docs.sap-backend.com"
+      }
+    ]
+  }
+}

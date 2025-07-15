@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sap-backend-service-account
+  namespace: sap-prod
+  annotations:
+    description: "Service account for SAP Backend applications"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: sap-prod
+  name: sap-backend-role
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints", "configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["networkpolicies"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sap-backend-role-binding
+  namespace: sap-prod
+subjects:
+- kind: ServiceAccount
+  name: sap-backend-service-account
+  namespace: sap-prod
+roleRef:
+  kind: Role
+  name: sap-backend-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: sap-backend-cluster-role
+rules:
+- apiGroups: [""]
+  resources: ["nodes", "namespaces"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["nodes", "pods"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: sap-backend-cluster-role-binding
+subjects:
+- kind: ServiceAccount
+  name: sap-backend-service-account
+  namespace: sap-prod
+roleRef:
+  kind: ClusterRole
+  name: sap-backend-cluster-role
+  apiGroup: rbac.authorization.k8s.io

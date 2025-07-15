@@ -1,0 +1,38 @@
+# Redis High Availability Cluster
+apiVersion: redis.redis.opstreelabs.in/v1beta1
+kind: RedisCluster
+metadata:
+  name: redis-ha-cluster
+  namespace: sap-prod
+  labels:
+    component: cache
+    managed-by: module-9-ha-dr
+spec:
+  clusterSize: 6
+  clusterVersion: v7
+  persistenceEnabled: true
+  redisExporter:
+    enabled: true
+  redisConfig:
+    additionalRedisConfig: |
+      save 900 1
+      save 300 10
+      save 60 10000
+      maxmemory-policy allkeys-lru
+      timeout 0
+      tcp-keepalive 300
+  storage:
+    volumeClaimTemplate:
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
+        storageClassName: gp3-multi-zone
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi

@@ -1,0 +1,71 @@
+# 🚀 SAP Backend GCP Deployment - Cloud Build Configuration
+# Automated deployment without local tools required
+
+steps:
+  # Step 1: Validate Configuration
+  - name: 'hashicorp/terraform:1.5'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        echo "🔍 Validating Terraform configuration..."
+        cd infrastructure/gcp/terraform
+        terraform init -backend-config="bucket=${_TERRAFORM_BUCKET}"
+        terraform validate
+        terraform fmt -check
+    env:
+      - 'TF_VAR_project_id=${_PROJECT_ID}'
+      - 'TF_VAR_region=${_REGION}'
+
+  # Step 2: Terraform Plan
+  - name: 'hashicorp/terraform:1.5'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        echo "📋 Creating Terraform execution plan..."
+        cd infrastructure/gcp/terraform
+        terraform init -backend-config="bucket=${_TERRAFORM_BUCKET}"
+        terraform plan -var-file="terraform.tfvars" -out=tfplan
+    env:
+      - 'TF_VAR_project_id=${_PROJECT_ID}'
+      - 'TF_VAR_region=${_REGION}'
+
+  # Step 3: Deploy Infrastructure (Module 1)
+  - name: 'hashicorp/terraform:1.5'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        echo "🚀 Deploying Module 1 Infrastructure..."
+        cd infrastructure/gcp/terraform
+        terraform init -backend-config="bucket=${_TERRAFORM_BUCKET}"
+        terraform apply -auto-approve tfplan
+        echo "✅ Module 1 deployment completed!"
+    env:
+      - 'TF_VAR_project_id=${_PROJECT_ID}'
+      - 'TF_VAR_region=${_REGION}'
+
+  # Step 4: Validate Deployment
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:latest'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "🔍 Validating deployed resources..."
+        gcloud compute networks list --filter="name:sap-backend-vpc"
+        gcloud container clusters list --filter="name:sap-backend-gke"
+        echo "✅ Validation completed!"
+
+# Substitution variables
+substitutions:
+  _PROJECT_ID: 'sap-project-466005'
+  _REGION: 'asia-south1'
+  _TERRAFORM_BUCKET: 'sap-backend-terraform-state-mumbai'
+
+# Build configuration
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'
+
+timeout: '1800s'  # 30 minutes timeout

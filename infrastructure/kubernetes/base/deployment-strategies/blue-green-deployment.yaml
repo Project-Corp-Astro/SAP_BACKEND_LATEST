@@ -1,0 +1,111 @@
+# Blue-Green Deployment with Argo Rollouts
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: api-gateway-rollout
+  namespace: sap-prod
+  labels:
+    app: api-gateway
+    strategy: blue-green
+    managed-by: module-10-cicd
+spec:
+  replicas: 5
+  strategy:
+    blueGreen:
+      activeService: api-gateway-active
+      previewService: api-gateway-preview
+      autoPromotionEnabled: false
+      scaleDownDelaySeconds: 30
+      prePromotionAnalysis:
+        templates:
+        - templateName: success-rate
+        args:
+        - name: service-name
+          value: api-gateway-preview.sap-prod.svc.cluster.local
+      postPromotionAnalysis:
+        templates:
+        - templateName: success-rate
+        args:
+        - name: service-name
+          value: api-gateway-active.sap-prod.svc.cluster.local
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+      - name: api-gateway
+        image: ghcr.io/project-corp-astro/sap_backend_latest/api-gateway:latest
+        ports:
+        - containerPort: 3000
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 300m
+            memory: 256Mi
+---
+# Active Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway-active
+  namespace: sap-prod
+  labels:
+    app: api-gateway
+    service-type: active
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 3000
+    protocol: TCP
+  selector:
+    app: api-gateway
+---
+# Preview Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway-preview
+  namespace: sap-prod
+  labels:
+    app: api-gateway
+    service-type: preview
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 3000
+    protocol: TCP
+  selector:
+    app: api-gateway
+---
+# Analysis Template
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: success-rate
+  namespace: sap-prod
+spec:
+  args:
+  - name: service-name
+  metrics:
+  - name: success-rate
+    interval: 5m
+    successCondition: result[0] >= 0.95
+    failureLimit: 3
+    provider:
+      prometheus:
+        address: http://prometheus.monitoring.svc.cluster.local:9090
+        query: |
+          sum(irate(
+            istio_requests_total{reporter="source",destination_service_name=~"{{args.service-name}}",response_code!~"5.*"}[5m]
+          )) / 
+          sum(irate(
+            istio_requests_total{reporter="source",destination_service_name=~"{{args.service-name}}"}[5m]
+          ))

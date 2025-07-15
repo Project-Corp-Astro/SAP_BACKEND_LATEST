@@ -1,0 +1,197 @@
+# Prometheus Rules for SAP Backend Monitoring
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-rules
+  namespace: monitoring
+  labels:
+    app: prometheus
+    managed-by: module-11-monitoring
+data:
+  sap-backend.rules.yml: |
+    groups:
+    - name: sap-backend.rules
+      interval: 15s
+      rules:
+      
+      # Recording Rules for Performance Metrics
+      - record: sap_backend:http_request_rate5m
+        expr: rate(sap_backend_http_requests_total[5m])
+        labels:
+          aggregation: rate5m
+      
+      - record: sap_backend:http_request_rate1h
+        expr: rate(sap_backend_http_requests_total[1h])
+        labels:
+          aggregation: rate1h
+      
+      - record: sap_backend:http_error_rate5m
+        expr: rate(sap_backend_http_requests_total{status_code=~"5.."}[5m]) / rate(sap_backend_http_requests_total[5m])
+        labels:
+          aggregation: error_rate5m
+      
+      - record: sap_backend:http_latency_p95_5m
+        expr: histogram_quantile(0.95, rate(sap_backend_http_request_duration_ms_bucket[5m]))
+        labels:
+          aggregation: p95_5m
+      
+      - record: sap_backend:http_latency_p99_5m
+        expr: histogram_quantile(0.99, rate(sap_backend_http_request_duration_ms_bucket[5m]))
+        labels:
+          aggregation: p99_5m
+      
+      # Business Metrics Recording Rules
+      - record: sap_backend:user_registration_rate1h
+        expr: rate(sap_backend_user_registrations_total[1h])
+        labels:
+          aggregation: registrations_per_hour
+      
+      - record: sap_backend:login_success_rate5m
+        expr: rate(sap_backend_user_logins_total{success="true"}[5m]) / rate(sap_backend_user_logins_total[5m])
+        labels:
+          aggregation: login_success_rate
+      
+      - record: sap_backend:subscription_conversion_rate1h
+        expr: rate(sap_backend_subscription_events_total{event_type="subscription_created"}[1h]) / rate(sap_backend_user_registrations_total[1h])
+        labels:
+          aggregation: conversion_rate
+
+    - name: sap-backend.alerts
+      rules:
+      
+      # Critical Alerts
+      - alert: ServiceDown
+        expr: up{job="sap-backend-services"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: "{{ $labels.kubernetes_name }}"
+        annotations:
+          summary: "SAP Backend service {{ $labels.kubernetes_name }} is down"
+          description: "Service {{ $labels.kubernetes_name }} in namespace {{ $labels.kubernetes_namespace }} has been down for more than 1 minute."
+          runbook_url: "https://docs.sap-backend.com/runbooks/service-down"
+      
+      - alert: HighErrorRate
+        expr: sap_backend:http_error_rate5m > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          service: "{{ $labels.service }}"
+        annotations:
+          summary: "High error rate detected for {{ $labels.service }}"
+          description: "Error rate is {{ $value | humanizePercentage }} for service {{ $labels.service }}"
+          runbook_url: "https://docs.sap-backend.com/runbooks/high-error-rate"
+      
+      - alert: HighLatency
+        expr: sap_backend:http_latency_p95_5m > 1000
+        for: 5m
+        labels:
+          severity: critical
+          service: "{{ $labels.service }}"
+        annotations:
+          summary: "High latency detected for {{ $labels.service }}"
+          description: "95th percentile latency is {{ $value }}ms for service {{ $labels.service }}"
+          runbook_url: "https://docs.sap-backend.com/runbooks/high-latency"
+      
+      # Warning Alerts
+      - alert: ModerateErrorRate
+        expr: sap_backend:http_error_rate5m > 0.01 and sap_backend:http_error_rate5m <= 0.05
+        for: 10m
+        labels:
+          severity: warning
+          service: "{{ $labels.service }}"
+        annotations:
+          summary: "Moderate error rate for {{ $labels.service }}"
+          description: "Error rate is {{ $value | humanizePercentage }} for service {{ $labels.service }}"
+      
+      - alert: ModerateLatency
+        expr: sap_backend:http_latency_p95_5m > 500 and sap_backend:http_latency_p95_5m <= 1000
+        for: 10m
+        labels:
+          severity: warning
+          service: "{{ $labels.service }}"
+        annotations:
+          summary: "Moderate latency for {{ $labels.service }}"
+          description: "95th percentile latency is {{ $value }}ms for service {{ $labels.service }}"
+      
+      - alert: LowCacheHitRate
+        expr: sap_backend_cache_hit_rate < 0.8
+        for: 15m
+        labels:
+          severity: warning
+          service: "{{ $labels.service }}"
+          cache_type: "{{ $labels.cache_type }}"
+        annotations:
+          summary: "Low cache hit rate for {{ $labels.cache_type }} in {{ $labels.service }}"
+          description: "Cache hit rate is {{ $value | humanizePercentage }} for {{ $labels.cache_type }} cache in service {{ $labels.service }}"
+      
+      # Database Alerts
+      - alert: DatabaseConnectionPoolHigh
+        expr: sap_backend_database_connections{status="active"} / (sap_backend_database_connections{status="active"} + sap_backend_database_connections{status="idle"}) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          database: "{{ $labels.database }}"
+        annotations:
+          summary: "High database connection pool usage for {{ $labels.database }}"
+          description: "Database connection pool usage is {{ $value | humanizePercentage }} for {{ $labels.database }}"
+      
+      # Business Logic Alerts
+      - alert: LowLoginSuccessRate
+        expr: sap_backend:login_success_rate5m < 0.95
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low login success rate detected"
+          description: "Login success rate is {{ $value | humanizePercentage }} over the last 5 minutes"
+      
+      - alert: NoUserRegistrations
+        expr: rate(sap_backend_user_registrations_total[1h]) == 0
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "No user registrations in the last hour"
+          description: "There have been no user registrations for over 1 hour, which may indicate an issue with the registration flow"
+      
+      # Infrastructure Alerts
+      - alert: KubernetesNodeNotReady
+        expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+        for: 10m
+        labels:
+          severity: critical
+          node: "{{ $labels.node }}"
+        annotations:
+          summary: "Kubernetes node {{ $labels.node }} is not ready"
+          description: "Node {{ $labels.node }} has been not ready for more than 10 minutes"
+      
+      - alert: KubernetesPodCrashLooping
+        expr: rate(kube_pod_container_status_restarts_total[15m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          pod: "{{ $labels.pod }}"
+          namespace: "{{ $labels.namespace }}"
+        annotations:
+          summary: "Pod {{ $labels.pod }} is crash looping"
+          description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} is restarting frequently"
+      
+      # Monitoring System Health
+      - alert: PrometheusTargetDown
+        expr: up == 0
+        for: 5m
+        labels:
+          severity: warning
+          target: "{{ $labels.instance }}"
+        annotations:
+          summary: "Prometheus target {{ $labels.instance }} is down"
+          description: "Prometheus target {{ $labels.instance }} of job {{ $labels.job }} has been down for more than 5 minutes"
+      
+      - alert: DeadMansSwitch
+        expr: vector(1)
+        labels:
+          severity: info
+        annotations:
+          summary: "Monitoring system heartbeat"
+          description: "This alert is always firing to ensure the alerting system is working correctly"

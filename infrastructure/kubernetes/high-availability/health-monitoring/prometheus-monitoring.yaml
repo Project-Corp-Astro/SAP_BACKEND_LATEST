@@ -1,0 +1,71 @@
+# Prometheus ServiceMonitor for HA Health Checks
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: ha-health-monitor
+  namespace: sap-prod
+  labels:
+    component: monitoring
+    managed-by: module-9-ha-dr
+spec:
+  selector:
+    matchLabels:
+      monitoring: ha-health
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+    scrapeTimeout: 10s
+---
+# PrometheusRule for HA Alerting
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: ha-alerts
+  namespace: sap-prod
+  labels:
+    component: alerting
+    managed-by: module-9-ha-dr
+spec:
+  groups:
+  - name: high-availability
+    rules:
+    - alert: PodCrashLooping
+      expr: rate(kube_pod_container_status_restarts_total[5m]) > 0
+      for: 5m
+      labels:
+        severity: critical
+        component: availability
+      annotations:
+        summary: "Pod {{ $labels.pod }} is crash looping"
+        description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} is restarting frequently"
+        
+    - alert: ServiceDown
+      expr: up{job="kubernetes-services"} == 0
+      for: 2m
+      labels:
+        severity: critical
+        component: availability
+      annotations:
+        summary: "Service {{ $labels.service }} is down"
+        description: "Service {{ $labels.service }} has been down for more than 2 minutes"
+        
+    - alert: DatabaseConnectionFailing
+      expr: postgres_up == 0
+      for: 1m
+      labels:
+        severity: critical
+        component: database
+      annotations:
+        summary: "PostgreSQL database is unreachable"
+        description: "Database connection has been failing for more than 1 minute"
+        
+    - alert: HighErrorRate
+      expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
+      for: 3m
+      labels:
+        severity: warning
+        component: application
+      annotations:
+        summary: "High error rate detected"
+        description: "Error rate is {{ $value }} errors per second"

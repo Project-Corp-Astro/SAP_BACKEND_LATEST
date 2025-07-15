@@ -1,0 +1,73 @@
+# PostgreSQL Automated Backup Job
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup-job
+  namespace: sap-prod
+  labels:
+    component: backup
+    managed-by: module-9-ha-dr
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: postgres-backup
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: postgres-backup
+            image: postgres:15
+            command:
+            - /bin/bash
+            - -c
+            - |
+              export PGPASSWORD=$POSTGRES_PASSWORD
+              pg_dump -h $POSTGRES_HOST -U $POSTGRES_USER -d $POSTGRES_DB | \
+              gzip > /backup/postgres-backup-$(date +%Y%m%d_%H%M%S).sql.gz
+              
+              # Upload to S3
+              aws s3 cp /backup/postgres-backup-$(date +%Y%m%d_%H%M%S).sql.gz \
+                s3://sap-backups/postgres/$(date +%Y/%m/%d)/
+              
+              # Cleanup local files older than 1 day
+              find /backup -name "*.sql.gz" -mtime +1 -delete
+              
+              echo "✅ PostgreSQL backup completed successfully"
+            env:
+            - name: POSTGRES_HOST
+              value: "postgres-ha-service"
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: password
+            - name: POSTGRES_DB
+              value: "sap_production"
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: access_key_id
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: secret_access_key
+            volumeMounts:
+            - name: backup-storage
+              mountPath: /backup
+          volumes:
+          - name: backup-storage
+            persistentVolumeClaim:
+              claimName: backup-pvc

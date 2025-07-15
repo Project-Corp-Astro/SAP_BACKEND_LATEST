@@ -1,0 +1,112 @@
+# ArgoCD Installation and Configuration
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: argocd
+  labels:
+    managed-by: module-10-cicd
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ArgoCD
+metadata:
+  name: argocd-server
+  namespace: argocd
+  labels:
+    managed-by: module-10-cicd
+spec:
+  server:
+    replicas: 2
+    ingress:
+      enabled: true
+      ingressClassName: nginx
+      hosts:
+      - argocd.sap-backend.com
+      tls:
+      - secretName: argocd-server-tls
+        hosts:
+        - argocd.sap-backend.com
+    config:
+      application.instanceLabelKey: argocd.argoproj.io/instance
+      server.rbac.log.enforce.enable: "true"
+      exec.enabled: "false"
+      admin.enabled: "true"
+      timeout.hard.reconciliation: "0"
+      timeout.reconciliation: "180s"
+      
+  dex:
+    image: ghcr.io/dexidp/dex
+    version: v2.37.0
+    openShiftOAuth: false
+    
+  redis:
+    image: redis
+    version: 7.0.11-alpine
+    
+  repo:
+    replicas: 2
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+        
+  controller:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 250m
+        memory: 1Gi
+      limits:
+        cpu: 500m
+        memory: 2Gi
+        
+  applicationSet:
+    enabled: true
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+        
+  notifications:
+    enabled: true
+    
+  rbac:
+    defaultPolicy: role:readonly
+    policy: |
+      p, role:admin, applications, *, */*, allow
+      p, role:admin, clusters, *, *, allow
+      p, role:admin, repositories, *, *, allow
+      p, role:developer, applications, *, sap-dev/*, allow
+      p, role:developer, applications, *, sap-staging/*, allow
+      g, sap-admins, role:admin
+      g, sap-developers, role:developer
+    scopes: '[groups]'
+---
+# ArgoCD CLI Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argocd-cli
+  namespace: argocd
+  labels:
+    managed-by: module-10-cicd
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argocd-cli-admin
+  labels:
+    managed-by: module-10-cicd
+subjects:
+- kind: ServiceAccount
+  name: argocd-cli
+  namespace: argocd
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io

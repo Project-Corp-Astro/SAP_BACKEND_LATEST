@@ -1,0 +1,543 @@
+# =====================================================
+# SAP Backend - Production Docker Compose Configuration
+# Module 3: Docker Compose Development Stack
+# Mathematical Success Target: 100% (4/4 validation checkpoints)
+# =====================================================
+version: '3.8'
+
+# =====================================================
+# NETWORKS CONFIGURATION
+# =====================================================
+networks:
+  sap-network:
+    driver: bridge
+    name: sap-backend-network
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
+
+  monitoring-network:
+    driver: bridge
+    name: sap-monitoring-network
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+          gateway: 172.21.0.1
+
+# =====================================================
+# VOLUMES CONFIGURATION
+# =====================================================
+volumes:
+  # Database Volumes
+  mongodb_data:
+    driver: local
+    name: sap_mongodb_data
+  
+  postgres_data:
+    driver: local
+    name: sap_postgres_data
+  
+  redis_data:
+    driver: local
+    name: sap_redis_data
+  
+  elasticsearch_data:
+    driver: local
+    name: sap_elasticsearch_data
+  
+  # Application Volumes
+  api_logs:
+    driver: local
+    name: sap_api_logs
+  
+  app_uploads:
+    driver: local
+    name: sap_app_uploads
+  
+  # Monitoring Volumes
+  prometheus_data:
+    driver: local
+    name: sap_prometheus_data
+  
+  grafana_data:
+    driver: local
+    name: sap_grafana_data
+
+# =====================================================
+# DATABASE SERVICES
+# =====================================================
+services:
+  # MongoDB - Primary Data Store
+  mongodb:
+    image: mongo:7.0-jammy
+    container_name: sap-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-SecureMongo2025!}
+      MONGO_INITDB_DATABASE: ${MONGO_DB:-sap-db}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - sap-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # PostgreSQL - RBAC & Analytics
+  postgres:
+    image: postgres:15-alpine
+    container_name: sap-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-sap_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-SecurePostgres2025!}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - sap-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-sap_db}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.3'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Redis - Cache & Sessions
+  redis:
+    image: redis:7.2-alpine
+    container_name: sap-redis
+    restart: unless-stopped
+    command: >
+      redis-server 
+      --appendonly yes 
+      --requirepass ${REDIS_PASSWORD:-SecureRedis2025!}
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - sap-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.2'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Elasticsearch - Search & Logging
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: sap-elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+      - xpack.ml.enabled=false
+      - cluster.routing.allocation.disk.threshold_enabled=false
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - sap-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# =====================================================
+# APPLICATION SERVICES
+# =====================================================
+
+  # API Gateway - Entry Point
+  api-gateway:
+    build:
+      context: ./backend/api-gateway
+      dockerfile: Dockerfile
+      target: production
+    container_name: sap-api-gateway
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 5001
+      # Service URLs
+      AUTH_SERVICE_URL: http://auth-service:3001
+      USER_SERVICE_URL: http://user-service:3002
+      CONTENT_SERVICE_URL: http://content-service:3005
+      SUBSCRIPTION_SERVICE_URL: http://subscription-service:3003
+      # Database connections (passed to downstream services)
+      MONGO_URI: mongodb://admin:${MONGO_ROOT_PASSWORD:-SecureMongo2025!}@mongodb:27017/sap-db?authSource=admin
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-SecureRedis2025!}
+      # Security
+      JWT_SECRET: ${JWT_SECRET:-SuperSecureJWTKey2025!ChangeInProduction}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-SuperSecureRefreshKey2025!}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000,http://localhost:5173}
+    ports:
+      - "5001:5001"
+    volumes:
+      - api_logs:/app/logs
+    depends_on:
+      - mongodb
+      - redis
+      - elasticsearch
+      - postgres
+      - auth-service
+      - user-service
+      - content-service
+      - subscription-service
+    networks:
+      - sap-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.3'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Auth Service - Authentication & Authorization
+  auth-service:
+    build:
+      context: ./backend/services/auth-service
+      dockerfile: Dockerfile
+      target: production
+    container_name: sap-auth-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      MONGO_URI: mongodb://admin:${MONGO_ROOT_PASSWORD:-SecureMongo2025!}@mongodb:27017/sap-db?authSource=admin
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-SecureRedis2025!}
+      JWT_SECRET: ${JWT_SECRET:-SuperSecureJWTKey2025!ChangeInProduction}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-SuperSecureRefreshKey2025!}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-4h}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      # Email Configuration
+      EMAIL_HOST: ${EMAIL_HOST:-smtp.gmail.com}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_USER: ${EMAIL_USER}
+      EMAIL_PASS: ${EMAIL_PASS}
+    ports:
+      - "3001:3001"
+    volumes:
+      - api_logs:/app/logs
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - sap-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.4'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # User Service - User Management & RBAC
+  user-service:
+    build:
+      context: ./backend/services/user-service
+      dockerfile: Dockerfile
+      target: production
+    container_name: sap-user-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3002
+      MONGO_URI: mongodb://admin:${MONGO_ROOT_PASSWORD:-SecureMongo2025!}@mongodb:27017/sap-db?authSource=admin
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-sap_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-SecurePostgres2025!}
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-SecureRedis2025!}
+      JWT_SECRET: ${JWT_SECRET:-SuperSecureJWTKey2025!ChangeInProduction}
+    ports:
+      - "3002:3002"
+    volumes:
+      - api_logs:/app/logs
+      - app_uploads:/app/uploads
+    depends_on:
+      - mongodb
+      - postgres
+      - redis
+    networks:
+      - sap-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+          cpus: '0.4'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Content Service - Content Management & Search
+  content-service:
+    build:
+      context: ./backend/services/content-service
+      dockerfile: Dockerfile
+      target: production
+    container_name: sap-content-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3005
+      MONGO_URI: mongodb://admin:${MONGO_ROOT_PASSWORD:-SecureMongo2025!}@mongodb:27017/sap-db?authSource=admin
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-SecureRedis2025!}
+      ELASTICSEARCH_NODE: http://elasticsearch:9200
+      JWT_SECRET: ${JWT_SECRET:-SuperSecureJWTKey2025!ChangeInProduction}
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE:-50MB}
+    ports:
+      - "3005:3005"
+    volumes:
+      - api_logs:/app/logs
+      - app_uploads:/app/uploads
+      - app_uploads:/app/media
+    depends_on:
+      - mongodb
+      - redis
+      - elasticsearch
+    networks:
+      - sap-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3005/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 90s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Subscription Service - Billing & Subscription Management
+  subscription-service:
+    build:
+      context: ./backend/services/subscription-management-service
+      dockerfile: Dockerfile
+      target: production
+    container_name: sap-subscription-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3003
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-sap_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-SecurePostgres2025!}
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-SecureRedis2025!}
+      JWT_SECRET: ${JWT_SECRET:-SuperSecureJWTKey2025!ChangeInProduction}
+      # Payment Configuration
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+    ports:
+      - "3003:3003"
+    volumes:
+      - api_logs:/app/logs
+      - app_uploads:/app/invoices
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - sap-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+          cpus: '0.4'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# =====================================================
+# MONITORING & OBSERVABILITY SERVICES
+# =====================================================
+
+  # Prometheus - Metrics Collection
+  prometheus:
+    image: prom/prometheus:v2.47.2
+    container_name: sap-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - sap-network
+      - monitoring-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.3'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Grafana - Visualization Dashboard
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: sap-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-SecureGrafana2025!}
+      GF_USERS_ALLOW_SIGN_UP: false
+      GF_SECURITY_ALLOW_EMBEDDING: true
+      GF_AUTH_ANONYMOUS_ENABLED: false
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      - prometheus
+    networks:
+      - monitoring-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.2'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# =====================================================
+# DEVELOPMENT OVERRIDE (docker-compose.override.yml)
+# =====================================================
+# Note: Create docker-compose.override.yml for development-specific settings:
+# - Volume mounts for hot reloading
+# - Debug ports
+# - Development environment variables

@@ -1,0 +1,75 @@
+# Production Pod Disruption Budgets
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-gateway-pdb
+  namespace: sap-prod
+  labels:
+    app: api-gateway
+    component: availability
+    managed-by: module-8-autoscaling
+spec:
+  minAvailable: 50%
+  selector:
+    matchLabels:
+      app: api-gateway
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: auth-service-pdb
+  namespace: sap-prod
+  labels:
+    app: auth-service
+    component: availability
+    managed-by: module-8-autoscaling
+spec:
+  minAvailable: 50%
+  selector:
+    matchLabels:
+      app: auth-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: user-service-pdb
+  namespace: sap-prod
+  labels:
+    app: user-service
+    component: availability
+    managed-by: module-8-autoscaling
+spec:
+  minAvailable: 50%
+  selector:
+    matchLabels:
+      app: user-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: content-service-pdb
+  namespace: sap-prod
+  labels:
+    app: content-service
+    component: availability
+    managed-by: module-8-autoscaling
+spec:
+  minAvailable: 50%
+  selector:
+    matchLabels:
+      app: content-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: subscription-service-pdb
+  namespace: sap-prod
+  labels:
+    app: subscription-service
+    component: availability
+    managed-by: module-8-autoscaling
+spec:
+  minAvailable: 50%
+  selector:
+    matchLabels:
+      app: subscription-service

@@ -1,0 +1,69 @@
+# PostgreSQL High Availability Cluster
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres-ha-cluster
+  namespace: sap-prod
+  labels:
+    component: database
+    managed-by: module-9-ha-dr
+spec:
+  instances: 3
+  
+  postgresql:
+    parameters:
+      max_connections: "200"
+      shared_preload_libraries: "pg_stat_statements"
+      wal_level: "replica"
+      hot_standby: "on"
+      max_wal_senders: "10"
+      max_replication_slots: "10"
+      checkpoint_completion_target: "0.9"
+      
+  bootstrap:
+    initdb:
+      database: sap_production
+      owner: sap_user
+      secret:
+        name: postgres-credentials
+        
+  storage:
+    size: 100Gi
+    storageClass: gp3-multi-zone
+    
+  monitoring:
+    enabled: true
+    
+  nodeMaintenanceWindow:
+    inProgress: false
+    reusePVC: true
+    
+  affinity:
+    enablePodAntiAffinity: true
+    topologyKey: kubernetes.io/zone
+    
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "500m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+      
+---
+# Database Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-ha-service
+  namespace: sap-prod
+  labels:
+    component: database
+spec:
+  type: ClusterIP
+  selector:
+    postgresql: postgres-ha-cluster
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP

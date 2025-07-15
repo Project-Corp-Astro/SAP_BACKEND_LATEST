@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sap-prod
+  labels:
+    environment: production
+    team: sap-backend
+    managed-by: kubernetes
+    pod-security.kubernetes.io/enforce: restricted
+  annotations:
+    description: "SAP Backend Production Environment"
+    contact: "team@sap-backend.com"
+    created-by: "kubernetes-orchestration-module-7"
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: sap-prod-quota
+  namespace: sap-prod
+spec:
+  hard:
+    requests.cpu: "20"
+    requests.memory: 40Gi
+    limits.cpu: "40"
+    limits.memory: 80Gi
+    persistentvolumeclaims: "20"
+    services: "30"
+    secrets: "50"
+    configmaps: "50"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: sap-prod-limits
+  namespace: sap-prod
+spec:
+  limits:
+  - default:
+      cpu: "1"
+      memory: "2Gi"
+    defaultRequest:
+      cpu: "200m"
+      memory: "512Mi"
+    max:
+      cpu: "8"
+      memory: "16Gi"
+    min:
+      cpu: "50m"
+      memory: "128Mi"
+    type: Container

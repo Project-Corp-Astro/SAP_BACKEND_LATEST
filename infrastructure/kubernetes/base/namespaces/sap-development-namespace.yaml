@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sap-dev
+  labels:
+    environment: development
+    team: sap-backend
+    managed-by: kubernetes
+    pod-security.kubernetes.io/enforce: privileged
+  annotations:
+    description: "SAP Backend Development Environment"
+    contact: "team@sap-backend.com"
+    created-by: "kubernetes-orchestration-module-7"
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: sap-dev-quota
+  namespace: sap-dev
+spec:
+  hard:
+    requests.cpu: "5"
+    requests.memory: 10Gi
+    limits.cpu: "10"
+    limits.memory: 20Gi
+    persistentvolumeclaims: "10"
+    services: "15"
+    secrets: "50"
+    configmaps: "50"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: sap-dev-limits
+  namespace: sap-dev
+spec:
+  limits:
+  - default:
+      cpu: "500m"
+      memory: "1Gi"
+    defaultRequest:
+      cpu: "100m"
+      memory: "256Mi"
+    max:
+      cpu: "4"
+      memory: "8Gi"
+    min:
+      cpu: "50m"
+      memory: "128Mi"
+    type: Container

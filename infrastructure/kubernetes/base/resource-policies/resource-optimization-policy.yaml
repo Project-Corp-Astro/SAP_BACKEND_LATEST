@@ -1,0 +1,99 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: resource-optimization-policy
+  namespace: sap-prod
+  labels:
+    component: resource-management
+    managed-by: module-8-autoscaling
+data:
+  policy.yaml: |
+    # Resource Optimization Policies
+    version: v1
+    
+    # CPU Optimization Rules
+    cpu_optimization:
+      target_utilization: 70
+      scale_up_threshold: 80
+      scale_down_threshold: 50
+      cooldown_period: 300s
+      
+    # Memory Optimization Rules  
+    memory_optimization:
+      target_utilization: 80
+      scale_up_threshold: 85
+      scale_down_threshold: 60
+      cooldown_period: 300s
+      
+    # Cost Optimization Rules
+    cost_optimization:
+      enable_spot_instances: true
+      prefer_smaller_instances: true
+      consolidation_enabled: true
+      idle_threshold: 10
+      
+    # Performance SLAs
+    performance_targets:
+      response_time_p95: 200ms
+      throughput_min: 1000rps
+      availability: 99.9%
+      
+    # Scaling Behaviors
+    scaling_behavior:
+      aggressive_scale_up: false
+      gradual_scale_down: true
+      burst_protection: true
+      
+    # Resource Limits
+    resource_limits:
+      max_cpu_per_pod: 2
+      max_memory_per_pod: 4Gi
+      max_replicas_per_service: 50
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: scaling-metrics-config
+  namespace: sap-monitoring
+  labels:
+    component: metrics-collection
+    managed-by: module-8-autoscaling
+data:
+  metrics.yaml: |
+    # Custom Scaling Metrics Configuration
+    custom_metrics:
+      - name: request_rate
+        query: rate(http_requests_total[2m])
+        threshold: 100
+        
+      - name: error_rate
+        query: rate(http_requests_total{status=~"5.."}[2m])
+        threshold: 0.01
+        
+      - name: queue_depth
+        query: queue_depth_total
+        threshold: 1000
+        
+      - name: database_connections
+        query: database_connections_active
+        threshold: 80
+        
+    # Business Metrics
+    business_metrics:
+      - name: active_users
+        query: active_users_total
+        scaling_factor: 0.1
+        
+      - name: revenue_per_minute
+        query: revenue_total
+        scaling_factor: 0.05
+        
+    # Infrastructure Metrics
+    infrastructure_metrics:
+      - name: node_cpu_utilization
+        query: (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[2m]))) * 100
+        threshold: 80
+        
+      - name: node_memory_utilization
+        query: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100
+        threshold: 85

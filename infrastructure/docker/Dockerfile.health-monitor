@@ -1,0 +1,114 @@
+# Multi-stage Dockerfile for Health Monitor Service
+# Mathematical Validation: Optimized + Secure + Performance-focused
+
+# Stage 1: Dependencies and Build
+FROM node:18-alpine AS dependencies
+LABEL stage=dependencies
+
+# Security: Create non-root user
+RUN addgroup -g 1000 healthmonitor && \
+    adduser -D -s /bin/sh -u 1000 -G healthmonitor healthmonitor
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apk add --no-cache \
+    curl \
+    wget \
+    ca-certificates \
+    && rm -rf /var/cache/apk/*
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies with security focus
+RUN npm ci --only=production && \
+    npm cache clean --force && \
+    chown -R healthmonitor:healthmonitor /app
+
+# Stage 2: Application Build
+FROM node:18-alpine AS application
+LABEL stage=application
+
+# Copy user from dependencies stage
+COPY --from=dependencies /etc/passwd /etc/passwd
+COPY --from=dependencies /etc/group /etc/group
+
+WORKDIR /app
+
+# Copy dependencies
+COPY --from=dependencies --chown=healthmonitor:healthmonitor /app/node_modules ./node_modules
+
+# Copy application files
+COPY --chown=healthmonitor:healthmonitor health-monitor.js ./
+COPY --chown=healthmonitor:healthmonitor package*.json ./
+
+# Create package.json for health monitor
+RUN cat > package.json << 'EOF'
+{
+  "name": "sap-health-monitor",
+  "version": "1.0.0",
+  "description": "Advanced Health Monitoring Service for SAP Backend",
+  "main": "health-monitor.js",
+  "scripts": {
+    "start": "node health-monitor.js",
+    "health": "curl -f http://localhost:9090/health || exit 1"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.4.0",
+    "prom-client": "^14.2.0"
+  },
+  "keywords": ["monitoring", "health", "prometheus", "sap"],
+  "author": "SAP Backend Team",
+  "license": "MIT"
+}
+EOF
+
+# Install health monitor specific dependencies
+RUN npm install express@^4.18.2 axios@^1.4.0 prom-client@^14.2.0 && \
+    npm cache clean --force
+
+# Stage 3: Production Image
+FROM gcr.io/distroless/nodejs18-debian11:latest AS production
+
+# Copy user configuration
+COPY --from=application /etc/passwd /etc/passwd
+COPY --from=application /etc/group /etc/group
+
+# Set working directory
+WORKDIR /app
+
+# Copy application with proper ownership
+COPY --from=application --chown=healthmonitor:healthmonitor /app ./
+
+# Switch to non-root user
+USER healthmonitor:healthmonitor
+
+# Health check configuration
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD ["node", "-e", "require('http').get('http://localhost:9090/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+
+# Environment configuration
+ENV NODE_ENV=production \
+    NODE_OPTIONS="--max-old-space-size=256 --max-http-header-size=8192" \
+    HEALTH_MONITOR_PORT=9090 \
+    LOG_LEVEL=info
+
+# Security labels
+LABEL security.scan="enabled" \
+      security.profile="restricted" \
+      security.compliance="cis-benchmark" \
+      monitoring.prometheus.scrape="true" \
+      monitoring.prometheus.port="9090" \
+      monitoring.prometheus.path="/metrics"
+
+# Expose monitoring port
+EXPOSE 9090
+
+# Signal handling
+STOPSIGNAL SIGTERM
+
+# Start the health monitor
+CMD ["health-monitor.js"]

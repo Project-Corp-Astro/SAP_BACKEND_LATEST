@@ -1,0 +1,51 @@
+# Application Data Backup Job
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: app-data-backup-job
+  namespace: sap-prod
+  labels:
+    component: backup
+    managed-by: module-9-ha-dr
+spec:
+  schedule: "0 3 * * *"  # Daily at 3 AM
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: app-data-backup
+            image: amazon/aws-cli:latest
+            command:
+            - /bin/bash
+            - -c
+            - |
+              # Backup application configurations
+              kubectl get configmaps -n sap-prod -o yaml > /backup/configmaps-$(date +%Y%m%d).yaml
+              kubectl get secrets -n sap-prod -o yaml > /backup/secrets-$(date +%Y%m%d).yaml
+              
+              # Upload to S3
+              aws s3 sync /backup s3://sap-backups/application-data/$(date +%Y/%m/%d)/
+              
+              echo "✅ Application data backup completed"
+            env:
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: access_key_id
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: secret_access_key
+            volumeMounts:
+            - name: backup-storage
+              mountPath: /backup
+          volumes:
+          - name: backup-storage
+            persistentVolumeClaim:
+              claimName: backup-pvc
+          serviceAccountName: backup-service-account
