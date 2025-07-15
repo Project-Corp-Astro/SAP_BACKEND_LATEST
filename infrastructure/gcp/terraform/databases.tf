@@ -144,16 +144,16 @@ resource "google_sql_database_instance" "postgresql_primary" {
     google_compute_network.vpc_network
   ]
 }
-}
 
 # ============================================================================
-# Cloud SQL Databases Creation
+# Cloud SQL Databases Creation (CONDITIONAL - only if Cloud SQL enabled)
 # ============================================================================
 
 # Main application database
 resource "google_sql_database" "sap_main_db" {
+  count    = var.enable_cloud_sql ? 1 : 0
   name     = var.postgres_main_database
-  instance = google_sql_database_instance.postgresql_primary.name
+  instance = google_sql_database_instance.postgresql_primary[0].name
   project  = var.project_id
 
   # Character set for international support
@@ -167,8 +167,9 @@ resource "google_sql_database" "sap_main_db" {
 
 # Authentication database (separate for security)
 resource "google_sql_database" "sap_auth_db" {
+  count    = var.enable_cloud_sql ? 1 : 0
   name     = var.postgres_auth_database
-  instance = google_sql_database_instance.postgresql_primary.name
+  instance = google_sql_database_instance.postgresql_primary[0].name
   project  = var.project_id
 
   charset   = "UTF8"
@@ -181,8 +182,9 @@ resource "google_sql_database" "sap_auth_db" {
 
 # Audit database for compliance
 resource "google_sql_database" "sap_audit_db" {
+  count    = var.enable_cloud_sql ? 1 : 0
   name     = var.postgres_audit_database
-  instance = google_sql_database_instance.postgresql_primary.name
+  instance = google_sql_database_instance.postgresql_primary[0].name
   project  = var.project_id
 
   charset   = "UTF8"
@@ -194,13 +196,14 @@ resource "google_sql_database" "sap_audit_db" {
 }
 
 # ============================================================================
-# Cloud SQL Users with Principle of Least Privilege
+# Cloud SQL Users with Principle of Least Privilege (CONDITIONAL)
 # ============================================================================
 
 # Application service user
 resource "google_sql_user" "app_user" {
+  count    = var.enable_cloud_sql ? 1 : 0
   name     = var.postgres_app_user
-  instance = google_sql_database_instance.postgresql_primary.name
+  instance = google_sql_database_instance.postgresql_primary[0].name
   password = var.postgres_app_password
   project  = var.project_id
 
@@ -211,8 +214,9 @@ resource "google_sql_user" "app_user" {
 
 # Read-only user for reporting and analytics
 resource "google_sql_user" "readonly_user" {
+  count    = var.enable_cloud_sql ? 1 : 0
   name     = var.postgres_readonly_user
-  instance = google_sql_database_instance.postgresql_primary.name
+  instance = google_sql_database_instance.postgresql_primary[0].name
   password = var.postgres_readonly_password
   project  = var.project_id
 
@@ -223,8 +227,9 @@ resource "google_sql_user" "readonly_user" {
 
 # Migration user with elevated privileges
 resource "google_sql_user" "migration_user" {
+  count    = var.enable_cloud_sql ? 1 : 0
   name     = var.postgres_migration_user
-  instance = google_sql_database_instance.postgresql_primary.name
+  instance = google_sql_database_instance.postgresql_primary[0].name
   password = var.postgres_migration_password
   project  = var.project_id
 
@@ -234,11 +239,12 @@ resource "google_sql_user" "migration_user" {
 }
 
 # ============================================================================
-# Memorystore Redis - Cache and Session Store
+# Memorystore Redis - Cache and Session Store (CONDITIONAL)
 # ============================================================================
 
 # Redis instance for caching and sessions
 resource "google_redis_instance" "main_cache" {
+  count        = var.enable_redis ? 1 : 0
   name         = "${var.environment}-sap-redis-${random_id.db_name_suffix.hex}"
   project      = var.project_id
   region       = var.region
@@ -383,8 +389,9 @@ resource "google_kms_crypto_key" "database_key" {
 # Database Connection Secrets Management
 # ============================================================================
 
-# PostgreSQL connection secret
+# PostgreSQL connection secret (conditional)
 resource "google_secret_manager_secret" "postgres_connection" {
+  count     = var.enable_cloud_sql ? 1 : 0
   secret_id = "${var.environment}-postgres-connection"
   project   = var.project_id
 
@@ -405,14 +412,15 @@ resource "google_secret_manager_secret" "postgres_connection" {
   }
 }
 
-# PostgreSQL connection details
+# PostgreSQL connection details (conditional)
 resource "google_secret_manager_secret_version" "postgres_connection" {
-  secret = google_secret_manager_secret.postgres_connection.id
+  count   = var.enable_cloud_sql ? 1 : 0
+  secret  = google_secret_manager_secret.postgres_connection[0].id
   secret_data = jsonencode({
-    host     = google_sql_database_instance.postgresql_primary.private_ip_address
+    host     = google_sql_database_instance.postgresql_primary[0].private_ip_address
     port     = 5432
-    database = google_sql_database.sap_main_db.name
-    username = google_sql_user.app_user.name
+    database = google_sql_database.sap_main_db[0].name
+    username = google_sql_user.app_user[0].name
     password = var.postgres_app_password
     ssl_mode = "require"
   })
@@ -422,8 +430,9 @@ resource "google_secret_manager_secret_version" "postgres_connection" {
   }
 }
 
-# Redis connection secret
+# Redis connection secret (conditional)
 resource "google_secret_manager_secret" "redis_connection" {
+  count     = var.enable_redis ? 1 : 0
   secret_id = "${var.environment}-redis-connection"
   project   = var.project_id
 
@@ -444,13 +453,14 @@ resource "google_secret_manager_secret" "redis_connection" {
   }
 }
 
-# Redis connection details
+# Redis connection details (conditional)
 resource "google_secret_manager_secret_version" "redis_connection" {
-  secret = google_secret_manager_secret.redis_connection.id
+  count   = var.enable_redis ? 1 : 0
+  secret  = google_secret_manager_secret.redis_connection[0].id
   secret_data = jsonencode({
-    host     = google_redis_instance.main_cache.host
-    port     = google_redis_instance.main_cache.port
-    auth_string = google_redis_instance.main_cache.auth_string
+    host        = google_redis_instance.main_cache[0].host
+    port        = google_redis_instance.main_cache[0].port
+    auth_string = google_redis_instance.main_cache[0].auth_string
   })
 
   lifecycle {
@@ -459,11 +469,12 @@ resource "google_secret_manager_secret_version" "redis_connection" {
 }
 
 # ============================================================================
-# Database Monitoring and Alerting
+# Database Monitoring and Alerting (CONDITIONAL)
 # ============================================================================
 
-# Cloud SQL monitoring
+# Cloud SQL monitoring (conditional)
 resource "google_monitoring_uptime_check_config" "postgres_uptime" {
+  count        = var.enable_cloud_sql ? 1 : 0
   display_name = "${var.environment}-postgres-uptime-check"
   project      = var.project_id
   timeout      = "10s"
@@ -476,7 +487,7 @@ resource "google_monitoring_uptime_check_config" "postgres_uptime" {
   monitored_resource {
     type = "gce_instance"
     labels = {
-      instance_id = google_sql_database_instance.postgresql_primary.first_ip_address
+      instance_id = google_sql_database_instance.postgresql_primary[0].first_ip_address
       zone        = "${var.region}-a"
     }
   }
@@ -487,8 +498,9 @@ resource "google_monitoring_uptime_check_config" "postgres_uptime" {
   }
 }
 
-# Redis monitoring
+# Redis monitoring (conditional)
 resource "google_monitoring_uptime_check_config" "redis_uptime" {
+  count        = var.enable_redis ? 1 : 0
   display_name = "${var.environment}-redis-uptime-check"
   project      = var.project_id
   timeout      = "10s"
@@ -501,7 +513,7 @@ resource "google_monitoring_uptime_check_config" "redis_uptime" {
   monitored_resource {
     type = "gce_instance"
     labels = {
-      instance_id = google_redis_instance.main_cache.host
+      instance_id = google_redis_instance.main_cache[0].host
       zone        = "${var.region}-a"
     }
   }
@@ -536,44 +548,44 @@ resource "google_service_networking_connection" "private_vpc_connection" {
 # Output Values for Module Integration
 # ============================================================================
 
-# PostgreSQL outputs
+# PostgreSQL outputs (conditional)
 output "postgres_instance_name" {
   description = "Name of the PostgreSQL instance"
-  value       = google_sql_database_instance.postgresql_primary.name
+  value       = var.enable_cloud_sql ? google_sql_database_instance.postgresql_primary[0].name : null
 }
 
 output "postgres_private_ip" {
   description = "Private IP address of PostgreSQL instance"
-  value       = google_sql_database_instance.postgresql_primary.private_ip_address
+  value       = var.enable_cloud_sql ? google_sql_database_instance.postgresql_primary[0].private_ip_address : null
   sensitive   = true
 }
 
 output "postgres_connection_name" {
   description = "Connection name for Cloud SQL Proxy"
-  value       = google_sql_database_instance.postgresql_primary.connection_name
+  value       = var.enable_cloud_sql ? google_sql_database_instance.postgresql_primary[0].connection_name : null
 }
 
-# Redis outputs
+# Redis outputs (conditional)
 output "redis_host" {
   description = "Redis instance host"
-  value       = google_redis_instance.main_cache.host
+  value       = var.enable_redis ? google_redis_instance.main_cache[0].host : null
   sensitive   = true
 }
 
 output "redis_port" {
   description = "Redis instance port"
-  value       = google_redis_instance.main_cache.port
+  value       = var.enable_redis ? google_redis_instance.main_cache[0].port : null
 }
 
-# Secrets outputs
+# Secrets outputs (conditional)
 output "postgres_secret_name" {
   description = "Name of the PostgreSQL connection secret"
-  value       = google_secret_manager_secret.postgres_connection.secret_id
+  value       = var.enable_cloud_sql ? google_secret_manager_secret.postgres_connection[0].secret_id : null
 }
 
 output "redis_secret_name" {
   description = "Name of the Redis connection secret"
-  value       = google_secret_manager_secret.redis_connection.secret_id
+  value       = var.enable_redis ? google_secret_manager_secret.redis_connection[0].secret_id : null
 }
 
 output "mongodb_secret_name" {

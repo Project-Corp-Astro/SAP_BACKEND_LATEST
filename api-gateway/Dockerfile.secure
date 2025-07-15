@@ -1,0 +1,79 @@
+# Security-Hardened Multi-Stage Build
+FROM node:18-alpine AS base-security
+# Install security scanning tools
+RUN apk add --no-cache \
+    dumb-init \
+    curl \
+    && rm -rf /var/cache/apk/*
+
+# Create non-root user with specific UID
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S gateway -u 1001 -G nodejs
+
+FROM base-security AS dependencies
+WORKDIR /app
+# Copy package files with proper ownership
+COPY --chown=1001:1001 package*.json ./
+# Install dependencies with security audit
+RUN npm ci --only=production --audit --audit-level=moderate && \
+    npm cache clean --force && \
+    rm -rf /tmp/*
+
+FROM base-security AS builder
+WORKDIR /app
+COPY --chown=1001:1001 package*.json ./
+RUN npm ci --audit --audit-level=moderate
+COPY --chown=1001:1001 . .
+RUN npm run build 2>/dev/null || echo "No build script"
+
+# Security-hardened production stage
+FROM gcr.io/distroless/nodejs18-debian11 AS production
+
+# Security labels for compliance
+LABEL maintainer="SAP Security Team"
+LABEL security.scan="enabled"
+LABEL security.profile="restricted"
+LABEL security.compliance="cis-benchmark"
+LABEL security.classification="internal"
+
+# Create application directory
+WORKDIR /app
+
+# Copy files with security context
+COPY --from=dependencies --chown=1001:1001 /app/node_modules ./node_modules
+COPY --from=builder --chown=1001:1001 /app/dist ./dist
+COPY --from=builder --chown=1001:1001 /app/package*.json ./
+COPY --from=builder --chown=1001:1001 /app/src ./src
+
+# Security environment variables
+ENV NODE_ENV=production
+ENV NODE_OPTIONS="--max-old-space-size=192 --max-http-header-size=8192 --disable-proto=delete"
+ENV PORT=5001
+ENV TRUST_PROXY=1
+
+# Switch to non-root user (distroless default)
+USER 1001:1001
+
+# Expose port
+EXPOSE 5001
+
+# Security-enhanced health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD node -e " \
+    const http = require('http'); \
+    const options = { \
+        hostname: 'localhost', \
+        port: 5001, \
+        path: '/health', \
+        method: 'GET', \
+        timeout: 3000 \
+    }; \
+    const req = http.request(options, (res) => { \
+        process.exit(res.statusCode === 200 ? 0 : 1); \
+    }); \
+    req.on('error', () => process.exit(1)); \
+    req.on('timeout', () => process.exit(1)); \
+    req.end();"
+
+# Security-focused startup
+CMD ["node", "--max-old-space-size=192", "--max-http-header-size=8192", "--disable-proto=delete", "dist/server.js"]

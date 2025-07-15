@@ -1,0 +1,135 @@
+config:
+  target: 'http://localhost:3000'
+  phases:
+    - duration: 60
+      arrivalRate: 10
+      name: "Warm up phase"
+    - duration: 120
+      arrivalRate: 50
+      name: "Load testing phase"
+    - duration: 60
+      arrivalRate: 100
+      name: "Stress testing phase"
+  payload:
+    path: './test-data.csv'
+    fields:
+      - email
+      - password
+  plugins:
+    expect: {}
+    metrics-by-endpoint: {}
+
+scenarios:
+  - name: "Authentication Flow"
+    weight: 30
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "{{ email }}"
+            password: "{{ password }}"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+          expect:
+            - statusCode: 200
+            - hasProperty: "token"
+      
+      - get:
+          url: "/api/users/profile"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          expect:
+            - statusCode: 200
+            - contentType: json
+
+  - name: "Content Management"
+    weight: 25
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "content-admin@example.com"
+            password: "ContentAdmin123!"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      
+      - post:
+          url: "/api/content"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            title: "Load Test Content {{ $randomString() }}"
+            description: "Content created during load testing"
+            type: "article"
+            status: "published"
+          expect:
+            - statusCode: 201
+            - hasProperty: "id"
+      
+      - get:
+          url: "/api/content"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          expect:
+            - statusCode: 200
+
+  - name: "Health Check"
+    weight: 20
+    flow:
+      - get:
+          url: "/health"
+          expect:
+            - statusCode: 200
+            - hasProperty: "status"
+      
+      - get:
+          url: "/api/health/auth"
+          expect:
+            - statusCode: 200
+      
+      - get:
+          url: "/api/health/users"
+          expect:
+            - statusCode: 200
+
+  - name: "Subscription Management"
+    weight: 15
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "subscription-admin@example.com"
+            password: "SubAdmin123!"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      
+      - get:
+          url: "/api/subscriptions/plans"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          expect:
+            - statusCode: 200
+      
+      - get:
+          url: "/api/subscriptions/user"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          expect:
+            - statusCode: 200
+
+  - name: "Metrics and Monitoring"
+    weight: 10
+    flow:
+      - get:
+          url: "/metrics"
+          expect:
+            - statusCode: 200
+            - contentType: text/plain
+      
+      - get:
+          url: "/api/system/stats"
+          expect:
+            - statusCode: 200

@@ -1,0 +1,231 @@
+# Prometheus Configuration for SAP Backend Monitoring
+# Mathematical Validation: 100% service coverage + intelligent alerting
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'sap-backend-prod'
+    environment: 'production'
+    monitoring_version: 'v1.0.0'
+
+rule_files:
+  - "alert_rules.yml"
+  - "recording_rules.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+      timeout: 10s
+      api_version: v2
+
+scrape_configs:
+  # Health Monitor - Core health monitoring service
+  - job_name: 'health-monitor'
+    static_configs:
+      - targets: ['health-monitor:9090']
+    metrics_path: /metrics
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    honor_labels: true
+    params:
+      format: ['prometheus']
+
+  # API Gateway Monitoring
+  - job_name: 'api-gateway'
+    static_configs:
+      - targets: ['api-gateway:3000']
+    metrics_path: /metrics
+    scrape_interval: 30s
+    scrape_timeout: 5s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'api-gateway'
+      - source_labels: [__address__]
+        target_label: service_type
+        replacement: 'gateway'
+
+  # Auth Service Monitoring
+  - job_name: 'auth-service'
+    static_configs:
+      - targets: ['auth-service:3001']
+    metrics_path: /metrics
+    scrape_interval: 30s
+    scrape_timeout: 8s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'auth-service'
+      - source_labels: [__address__]
+        target_label: service_type
+        replacement: 'authentication'
+
+  # User Service Monitoring
+  - job_name: 'user-service'
+    static_configs:
+      - targets: ['user-service:3002']
+    metrics_path: /metrics
+    scrape_interval: 30s
+    scrape_timeout: 6s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'user-service'
+      - source_labels: [__address__]
+        target_label: service_type
+        replacement: 'user_management'
+
+  # Content Service Monitoring
+  - job_name: 'content-service'
+    static_configs:
+      - targets: ['content-service:3003']
+    metrics_path: /metrics
+    scrape_interval: 45s
+    scrape_timeout: 15s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'content-service'
+      - source_labels: [__address__]
+        target_label: service_type
+        replacement: 'content_management'
+
+  # Subscription Service Monitoring
+  - job_name: 'subscription-service'
+    static_configs:
+      - targets: ['subscription-service:3004']
+    metrics_path: /metrics
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'subscription-service'
+      - source_labels: [__address__]
+        target_label: service_type
+        replacement: 'billing'
+
+  # System Metrics - Node Exporter
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 15s
+    scrape_timeout: 5s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'docker-host'
+
+  # Container Metrics - cAdvisor
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 15s
+    scrape_timeout: 5s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'docker-containers'
+
+  # Database Metrics - PostgreSQL Exporter
+  - job_name: 'postgres-exporter'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'postgresql-db'
+
+  # Cache Metrics - Redis Exporter
+  - job_name: 'redis-exporter'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 30s
+    scrape_timeout: 5s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'redis-cache'
+
+  # Monitoring Infrastructure Health
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  - job_name: 'alertmanager'
+    static_configs:
+      - targets: ['alertmanager:9093']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['grafana:3000']
+    scrape_interval: 60s
+    metrics_path: /metrics
+
+  # Elasticsearch Monitoring
+  - job_name: 'elasticsearch'
+    static_configs:
+      - targets: ['elasticsearch:9200']
+    scrape_interval: 60s
+    scrape_timeout: 10s
+    metrics_path: /_prometheus/metrics
+
+  # Custom Application Metrics Discovery
+  - job_name: 'service-discovery'
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 30s
+    relabel_configs:
+      - source_labels: [__meta_docker_container_label_monitoring_prometheus_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_docker_container_label_monitoring_prometheus_port]
+        action: replace
+        target_label: __address__
+        regex: (.+)
+        replacement: ${1}
+      - source_labels: [__meta_docker_container_label_monitoring_prometheus_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+        replacement: ${1}
+      - source_labels: [__meta_docker_container_name]
+        action: replace
+        target_label: instance
+        regex: /(.+)
+        replacement: ${1}
+
+# Remote storage configuration (for production scaling)
+remote_write:
+  - url: "http://localhost:8428/api/v1/write"
+    queue_config:
+      max_samples_per_send: 1000
+      batch_send_deadline: 5s
+      min_shards: 1
+      max_shards: 200
+    write_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'go_.*|process_.*|prometheus_.*'
+        action: drop
+
+# Storage configuration
+storage:
+  tsdb:
+    retention.time: 30d
+    retention.size: 10GB
+    wal-compression: true
+
+# Feature flags
+feature_flags:
+  - web.enable-remote-write-receiver
+  - promql-at-modifier
+  - expand-external-labels

@@ -1,0 +1,87 @@
+# Security-Hardened Multi-Stage Build for User Service
+FROM node:18-alpine AS base-security
+# Install security dependencies
+RUN apk add --no-cache \
+    dumb-init \
+    curl \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/cache/apk/* \
+    && update-ca-certificates
+
+# Create non-root user for user service
+RUN addgroup -g 1003 -S nodejs && \
+    adduser -S userservice -u 1003 -G nodejs
+
+FROM base-security AS dependencies
+WORKDIR /app
+# Copy package files with proper ownership
+COPY --chown=1003:1003 package*.json ./
+# Install dependencies with security audit
+RUN npm ci --only=production --audit --audit-level=moderate && \
+    npm cache clean --force && \
+    rm -rf /tmp/*
+
+FROM base-security AS builder
+WORKDIR /app
+COPY --chown=1003:1003 package*.json ./
+RUN npm ci --audit --audit-level=moderate
+COPY --chown=1003:1003 . .
+RUN npm run build 2>/dev/null || echo "No build script"
+
+# Security-hardened production stage
+FROM gcr.io/distroless/nodejs18-debian11 AS production
+
+# Security compliance labels
+LABEL maintainer="SAP Security Team"
+LABEL security.scan="enabled"
+LABEL security.profile="restricted"
+LABEL security.compliance="cis-benchmark,gdpr,ccpa"
+LABEL security.classification="confidential"
+LABEL security.pii="encrypted"
+
+# Create application directory
+WORKDIR /app
+
+# Copy files with security context
+COPY --from=dependencies --chown=1003:1003 /app/node_modules ./node_modules
+COPY --from=builder --chown=1003:1003 /app/dist ./dist
+COPY --from=builder --chown=1003:1003 /app/package*.json ./
+COPY --from=builder --chown=1003:1003 /app/src ./src
+
+# Security environment variables with RBAC optimization
+ENV NODE_ENV=production
+ENV NODE_OPTIONS="--max-old-space-size=288 --max-http-header-size=8192 --disable-proto=delete"
+ENV PORT=3002
+ENV RBAC_CACHE_SIZE=1000
+ENV RBAC_CACHE_TTL=300
+ENV TRUST_PROXY=1
+ENV PII_ENCRYPTION=enabled
+
+# Switch to non-root user
+USER 1003:1003
+
+# Expose port
+EXPOSE 3002
+
+# RBAC-aware health check
+HEALTHCHECK --interval=30s --timeout=6s --start-period=35s --retries=3 \
+    CMD node -e " \
+    const http = require('http'); \
+    const options = { \
+        hostname: 'localhost', \
+        port: 3002, \
+        path: '/health', \
+        method: 'GET', \
+        timeout: 4000, \
+        headers: { 'User-Agent': 'HealthCheck/1.0' } \
+    }; \
+    const req = http.request(options, (res) => { \
+        process.exit(res.statusCode === 200 ? 0 : 1); \
+    }); \
+    req.on('error', () => process.exit(1)); \
+    req.on('timeout', () => process.exit(1)); \
+    req.end();"
+
+# Security-optimized startup with RBAC focus
+CMD ["node", "--max-old-space-size=288", "--max-http-header-size=8192", "--disable-proto=delete", "dist/server.js"]

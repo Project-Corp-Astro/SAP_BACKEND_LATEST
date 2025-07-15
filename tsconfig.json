@@ -1,0 +1,46 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "lib": ["ES2022"],
+    "allowJs": true,
+    "outDir": "./dist",
+    "rootDir": "./",
+    "strict": true,
+    "moduleResolution": "node",
+    "baseUrl": "./",
+    "paths": {
+      "@shared/*": ["shared/src/*"],
+      "@api-gateway/*": ["api-gateway/src/*"],
+      "@auth-service/*": ["services/auth-service/src/*"],
+      "@user-service/*": ["services/user-service/src/*"],
+      "@content-service/*": ["services/content-service/src/*"],
+      "@subscription-service/*": ["services/subscription-management-service/src/*"]
+    },
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "incremental": true,
+    "tsBuildInfoFile": "./dist/.tsbuildinfo"
+  },
+  "include": [
+    "api-gateway/src/**/*",
+    "services/*/src/**/*",
+    "shared/src/**/*",
+    "scripts/**/*",
+    "tools/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "backend",
+    "archives"
+  ]
+}

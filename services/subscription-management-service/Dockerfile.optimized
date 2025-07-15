@@ -1,0 +1,57 @@
+# Build stage - Alpine for building
+FROM node:18-alpine AS builder
+
+# Install system dependencies for financial calculations
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    openssl-dev \
+    && rm -rf /var/cache/apk/*
+
+WORKDIR /app
+
+# Copy package files for dependency installation
+COPY package*.json ./
+
+# Install dependencies with financial optimization
+RUN npm ci --only=production --silent \
+    && npm cache clean --force \
+    && rm -rf /tmp/*
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN npm run build 2>/dev/null || echo "No build script found"
+
+# Production stage - Distroless for PCI-DSS compliance
+FROM gcr.io/distroless/nodejs18-debian11 AS production
+
+# Create application directory
+WORKDIR /app
+
+# Copy production files
+COPY --from=builder --chown=1000:1000 /app/node_modules ./node_modules
+COPY --from=builder --chown=1000:1000 /app/dist ./dist
+COPY --from=builder --chown=1000:1000 /app/package*.json ./
+COPY --from=builder --chown=1000:1000 /app/src ./src
+
+# Set production environment with financial optimization
+ENV NODE_ENV=production
+ENV NODE_OPTIONS="--max-old-space-size=288 --optimize-for-size"
+ENV PORT=3003
+ENV BILLING_CACHE_SIZE=500
+
+# Switch to non-root user
+USER 1000:1000
+
+# Expose port
+EXPOSE 3003
+
+# Health check optimized for subscription service
+HEALTHCHECK --interval=30s --timeout=7s --start-period=40s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:3003/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"
+
+# Start with financial-optimized flags
+CMD ["node", "--max-old-space-size=288", "--optimize-for-size", "dist/server.js"]

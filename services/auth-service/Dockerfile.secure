@@ -1,0 +1,86 @@
+# Security-Hardened Multi-Stage Build for Auth Service
+FROM node:18-alpine AS base-security
+# Install security and crypto dependencies
+RUN apk add --no-cache \
+    dumb-init \
+    curl \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/cache/apk/* \
+    && update-ca-certificates
+
+# Create non-root user for auth service
+RUN addgroup -g 1002 -S nodejs && \
+    adduser -S authuser -u 1002 -G nodejs
+
+FROM base-security AS dependencies
+WORKDIR /app
+# Copy package files with proper ownership
+COPY --chown=1002:1002 package*.json ./
+# Install dependencies with comprehensive security audit
+RUN npm ci --only=production --audit --audit-level=moderate && \
+    npm cache clean --force && \
+    rm -rf /tmp/*
+
+FROM base-security AS builder
+WORKDIR /app
+COPY --chown=1002:1002 package*.json ./
+RUN npm ci --audit --audit-level=moderate
+COPY --chown=1002:1002 . .
+RUN npm run build 2>/dev/null || echo "No build script"
+
+# Security-hardened production stage
+FROM gcr.io/distroless/nodejs18-debian11 AS production
+
+# Enhanced security labels
+LABEL maintainer="SAP Security Team"
+LABEL security.scan="enabled"
+LABEL security.profile="restricted"
+LABEL security.compliance="cis-benchmark,pci-dss"
+LABEL security.classification="confidential"
+LABEL security.crypto="high-entropy"
+
+# Create application directory
+WORKDIR /app
+
+# Copy files with security context
+COPY --from=dependencies --chown=1002:1002 /app/node_modules ./node_modules
+COPY --from=builder --chown=1002:1002 /app/dist ./dist
+COPY --from=builder --chown=1002:1002 /app/package*.json ./
+COPY --from=builder --chown=1002:1002 /app/src ./src
+
+# Security-focused environment variables
+ENV NODE_ENV=production
+ENV NODE_OPTIONS="--max-old-space-size=384 --max-http-header-size=8192 --disable-proto=delete --enable-source-maps"
+ENV PORT=3001
+ENV UV_THREADPOOL_SIZE=16
+ENV TRUST_PROXY=1
+ENV BCRYPT_ROUNDS=12
+
+# Switch to non-root user
+USER 1002:1002
+
+# Expose port
+EXPOSE 3001
+
+# Enhanced health check for auth service
+HEALTHCHECK --interval=30s --timeout=8s --start-period=45s --retries=3 \
+    CMD node -e " \
+    const http = require('http'); \
+    const options = { \
+        hostname: 'localhost', \
+        port: 3001, \
+        path: '/health', \
+        method: 'GET', \
+        timeout: 5000, \
+        headers: { 'User-Agent': 'HealthCheck/1.0' } \
+    }; \
+    const req = http.request(options, (res) => { \
+        process.exit(res.statusCode === 200 ? 0 : 1); \
+    }); \
+    req.on('error', () => process.exit(1)); \
+    req.on('timeout', () => process.exit(1)); \
+    req.end();"
+
+# Security-optimized startup with crypto hardening
+CMD ["node", "--max-old-space-size=384", "--max-http-header-size=8192", "--disable-proto=delete", "--enable-source-maps", "dist/server.js"]

@@ -1,19 +1,4 @@
 {
-<<<<<<< HEAD
-  "compilerOptions": {
-    "target": "es2018",
-    "module": "commonjs",
-    "declaration": true,
-    "outDir": "./dist",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "**/__tests__/*"]
-}
-=======
     "compilerOptions": {
       "target": "es2018",
       "module": "commonjs",
@@ -27,4 +12,3 @@
     "include": ["src/**/*"],
     "exclude": ["node_modules", "**/__tests__/*"]
   }
->>>>>>> 31-rbac-implementation

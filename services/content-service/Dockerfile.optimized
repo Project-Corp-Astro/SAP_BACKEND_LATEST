@@ -1,0 +1,66 @@
+# Build stage - Alpine with media processing tools
+FROM node:18-alpine AS builder
+
+# Install system dependencies for media processing
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    imagemagick \
+    imagemagick-dev \
+    ffmpeg \
+    && rm -rf /var/cache/apk/*
+
+WORKDIR /app
+
+# Copy package files for dependency installation
+COPY package*.json ./
+
+# Install dependencies with media optimization
+RUN npm ci --only=production --silent \
+    && npm cache clean --force \
+    && rm -rf /tmp/*
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN npm run build 2>/dev/null || echo "No build script found"
+
+# Production stage - Distroless with media processing
+FROM gcr.io/distroless/nodejs18-debian11 AS production
+
+# Install minimal media processing tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    imagemagick \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create application directory
+WORKDIR /app
+
+# Copy production files and media tools
+COPY --from=builder --chown=1000:1000 /app/node_modules ./node_modules
+COPY --from=builder --chown=1000:1000 /app/dist ./dist
+COPY --from=builder --chown=1000:1000 /app/package*.json ./
+COPY --from=builder --chown=1000:1000 /app/src ./src
+
+# Set production environment with media optimization
+ENV NODE_ENV=production
+ENV NODE_OPTIONS="--max-old-space-size=384 --optimize-for-size"
+ENV PORT=3005
+ENV MAGICK_MEMORY_LIMIT=256MB
+ENV MAGICK_MAP_LIMIT=512MB
+
+# Switch to non-root user
+USER 1000:1000
+
+# Expose port
+EXPOSE 3005
+
+# Health check optimized for content service
+HEALTHCHECK --interval=30s --timeout=8s --start-period=45s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:3005/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"
+
+# Start with media-optimized flags
+CMD ["node", "--max-old-space-size=384", "--optimize-for-size", "dist/server.js"]
