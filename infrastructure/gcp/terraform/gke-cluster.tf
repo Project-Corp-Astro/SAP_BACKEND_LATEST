@@ -62,7 +62,7 @@ resource "google_container_cluster" "primary" {
     }
   }
 
-  # Addons configuration
+  # Addons configuration (Autopilot compatible)
   addons_config {
     http_load_balancing {
       disabled = false
@@ -72,30 +72,23 @@ resource "google_container_cluster" "primary" {
       disabled = false
     }
     
-    network_policy_config {
-      disabled = !var.enable_network_policy
-    }
-    
-    dns_cache_config {
-      enabled = true
-    }
-    
-    gcp_filestore_csi_driver_config {
-      enabled = true
-    }
+    # Remove conflicting addons for Autopilot mode
+    # network_policy_config, dns_cache_config, gcp_filestore_csi_driver_config
+    # are automatically managed by Autopilot
     
     gcs_fuse_csi_driver_config {
       enabled = true
     }
   }
 
-  # Security configuration
-  cluster_autoscaling {
-    enabled = true
-    
-    dynamic "auto_provisioning_defaults" {
-      for_each = var.enable_autopilot ? [] : [1]
-      content {
+  # Security configuration (Autopilot compatible)
+  # Note: cluster_autoscaling is automatically managed by Autopilot
+  dynamic "cluster_autoscaling" {
+    for_each = var.enable_autopilot ? [] : [1]
+    content {
+      enabled = true
+      
+      auto_provisioning_defaults {
         oauth_scopes = [
           "https://www.googleapis.com/auth/cloud-platform"
         ]
@@ -116,18 +109,18 @@ resource "google_container_cluster" "primary" {
           enable_integrity_monitoring = true
         }
       }
-    }
-    
-    resource_limits {
-      resource_type = "cpu"
-      minimum       = 1
-      maximum       = 100
-    }
-    
-    resource_limits {
-      resource_type = "memory"
-      minimum       = 1
-      maximum       = 1000
+      
+      resource_limits {
+        resource_type = "cpu"
+        minimum       = 1
+        maximum       = 100
+      }
+      
+      resource_limits {
+        resource_type = "memory"
+        minimum       = 1
+        maximum       = 100
+      }
     }
   }
 

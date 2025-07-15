@@ -54,7 +54,7 @@ node_pool_initial_count   = 1                # Single node start
 # DATABASE CONFIGURATION (TESTING - Minimal)
 # =================================================================
 enable_cloud_sql      = false               # Use Supabase for subscriptions
-cloud_sql_tier        = "db-f1-micro"       # Not used (Supabase external)
+cloud_sql_tier        = "db-custom-2-4096"  # Valid tier (not used - Supabase external)
 enable_redis          = true                # Enable Redis for caching
 redis_memory_size_gb  = 1                   # Minimum size for testing
 
