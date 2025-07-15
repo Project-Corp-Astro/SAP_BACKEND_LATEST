@@ -514,7 +514,7 @@ resource "google_monitoring_alert_policy" "redis_memory_utilization" {
     display_name = "Redis Memory Utilization High"
     condition_threshold {
       filter          = "resource.type=\"redis_instance\" AND resource.label.instance_id=\"${google_redis_instance.main_cache[0].name}\""
-      comparison      = "COMPARISON_GREATER_THAN"
+      comparison      = "COMPARISON_GT"
       threshold_value = 0.8
       duration        = "300s"
       
