@@ -244,7 +244,7 @@ output "validation_data" {
     project_number   = data.google_project.project.number
     
     dns_resolution = {
-      cluster_endpoint_hostname = split("//", google_container_cluster.primary.endpoint)[1]
+      cluster_endpoint_hostname = contains(google_container_cluster.primary.endpoint, "//") ? split("//", google_container_cluster.primary.endpoint)[1] : google_container_cluster.primary.endpoint
       private_cluster          = var.enable_private_cluster
     }
     
