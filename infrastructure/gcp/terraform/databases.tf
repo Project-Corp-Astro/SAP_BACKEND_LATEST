@@ -508,6 +508,7 @@ resource "google_monitoring_alert_policy" "redis_memory_utilization" {
   count        = var.enable_redis ? 1 : 0
   display_name = "${var.environment}-redis-memory-alert"
   project      = var.project_id
+  combiner     = "OR"  # Required: how to combine multiple conditions
   
   conditions {
     display_name = "Redis Memory Utilization High"
