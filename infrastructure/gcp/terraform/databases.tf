@@ -264,11 +264,11 @@ resource "google_redis_instance" "main_cache" {
     # Memory policy when Redis reaches memory limit
     maxmemory-policy = "allkeys-lru"
     
-    # Performance optimization
-    tcp-keepalive = "300"
-    timeout       = "300"
+    # Performance optimization - timeout for idle connections
+    timeout = "300"
     
     # Note: 'save' parameter is not supported in Redis 7.0
+    # Note: 'tcp-keepalive' parameter is not supported in Redis 7.0
     # Note: requirepass is not supported in Redis 7.0 - auth is handled by auth_enabled flag
   }
 
