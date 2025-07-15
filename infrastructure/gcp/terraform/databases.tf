@@ -259,7 +259,7 @@ resource "google_redis_instance" "main_cache" {
   # High availability for production
   tier = var.environment == "production" ? "STANDARD_HA" : "BASIC"
 
-  # Redis configuration
+  # Redis configuration (compatible with Redis 7.0)
   redis_configs = {
     # Memory policy when Redis reaches memory limit
     maxmemory-policy = "allkeys-lru"
@@ -271,8 +271,7 @@ resource "google_redis_instance" "main_cache" {
     tcp-keepalive = "300"
     timeout       = "300"
     
-    # Security
-    requirepass = "true"
+    # Note: requirepass is not supported in Redis 7.0 - auth is handled by auth_enabled flag
   }
 
   # Maintenance configuration
@@ -319,11 +318,13 @@ resource "google_secret_manager_secret" "mongodb_connection" {
   project   = var.project_id
 
   replication {
-    auto {
-      customer_managed_encryption {
-        kms_key_name = google_kms_crypto_key.database_key.id
-      }
-    }
+    auto {}  # Use default Google-managed encryption for now
+    # TODO: Enable customer-managed encryption after setting up service identity
+    # auto {
+    #   customer_managed_encryption {
+    #     kms_key_name = google_kms_crypto_key.database_key.id
+    #   }
+    # }
   }
 
   labels = {
@@ -396,11 +397,13 @@ resource "google_secret_manager_secret" "postgres_connection" {
   project   = var.project_id
 
   replication {
-    auto {
-      customer_managed_encryption {
-        kms_key_name = google_kms_crypto_key.database_key.id
-      }
-    }
+    auto {}  # Use default Google-managed encryption for now
+    # TODO: Enable customer-managed encryption after setting up service identity
+    # auto {
+    #   customer_managed_encryption {
+    #     kms_key_name = google_kms_crypto_key.database_key.id
+    #   }
+    # }
   }
 
   labels = {
@@ -437,11 +440,13 @@ resource "google_secret_manager_secret" "redis_connection" {
   project   = var.project_id
 
   replication {
-    auto {
-      customer_managed_encryption {
-        kms_key_name = google_kms_crypto_key.database_key.id
-      }
-    }
+    auto {}  # Use default Google-managed encryption for now
+    # TODO: Enable customer-managed encryption after setting up service identity
+    # auto {
+    #   customer_managed_encryption {
+    #     kms_key_name = google_kms_crypto_key.database_key.id
+    #   }
+    # }
   }
 
   labels = {
