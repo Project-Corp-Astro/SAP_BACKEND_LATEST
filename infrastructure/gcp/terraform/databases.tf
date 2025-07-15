@@ -354,10 +354,10 @@ resource "google_secret_manager_secret_version" "mongodb_connection" {
 # Database Security - KMS Keys
 # ============================================================================
 
-# KMS KeyRing for database encryption
+# KMS KeyRing for database encryption (Global for Secret Manager compatibility)
 resource "google_kms_key_ring" "database_keyring" {
   name     = "${var.environment}-sap-database-keyring"
-  location = var.region
+  location = "global"  # Must be global for Secret Manager automatic replication
   project  = var.project_id
 }
 

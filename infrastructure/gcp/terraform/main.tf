@@ -87,7 +87,7 @@ locals {
   required_apis = [
     "container.googleapis.com",          # Google Kubernetes Engine
     "compute.googleapis.com",            # Compute Engine (for GKE nodes)
-    "cloudsql.googleapis.com",          # Cloud SQL
+    # "cloudsql.googleapis.com",          # Cloud SQL - Disabled (using Supabase)
     "redis.googleapis.com",             # Cloud Memorystore for Redis
     "secretmanager.googleapis.com",     # Secret Manager
     "monitoring.googleapis.com",        # Cloud Monitoring

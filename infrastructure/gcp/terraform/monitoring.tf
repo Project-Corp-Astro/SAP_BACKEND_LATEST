@@ -355,8 +355,9 @@ resource "google_monitoring_alert_policy" "postgres_slow_queries" {
   }
 }
 
-# Redis Operations Rate Alert
+# Redis Operations Rate Alert (CONDITIONAL)
 resource "google_monitoring_alert_policy" "redis_high_ops_rate" {
+  count        = var.enable_monitoring && var.enable_redis ? 1 : 0
   display_name = "${var.environment}-redis-high-ops-rate"
   project      = var.project_id
   combiner     = "OR"
@@ -365,7 +366,7 @@ resource "google_monitoring_alert_policy" "redis_high_ops_rate" {
     display_name = "Redis high operations rate"
     
     condition_threshold {
-      filter          = "resource.type=\"redis_instance\" AND metric.type=\"redis.googleapis.com/commands/total\""
+      filter          = "resource.type=\"redis_instance\" AND metric.type=\"redis.googleapis.com/stats/operations/total\""
       comparison      = "COMPARISON_GT"
       threshold_value = var.environment == "production" ? 10000 : 5000  # ops/second
       duration        = "300s"  # 5 minutes
@@ -388,8 +389,9 @@ resource "google_monitoring_alert_policy" "redis_high_ops_rate" {
 # Backup and Recovery Monitoring
 # ============================================================================
 
-# PostgreSQL Backup Failure Alert
+# PostgreSQL Backup Failure Alert (CONDITIONAL)
 resource "google_monitoring_alert_policy" "postgres_backup_failure" {
+  count        = var.enable_monitoring && var.enable_cloud_sql ? 1 : 0
   display_name = "${var.environment}-postgres-backup-failure"
   project      = var.project_id
   combiner     = "OR"
