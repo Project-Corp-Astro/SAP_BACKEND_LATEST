@@ -124,7 +124,7 @@ postgres_authorized_networks = [
 
 # Redis Configuration
 redis_version       = "REDIS_7_0"
-redis_memory_size_gb = 1  # Change to 4+ for production
+# redis_memory_size_gb already defined above at line 59
 
 # MongoDB Configuration (Atlas)
 mongodb_connection_string = ""  # Add your MongoDB Atlas connection string
