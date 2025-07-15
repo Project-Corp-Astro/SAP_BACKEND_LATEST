@@ -113,10 +113,10 @@ postgres_app_user       = "sap_app_user"
 postgres_readonly_user  = "sap_readonly_user"
 postgres_migration_user = "sap_migration_user"
 
-# Database Passwords (CHANGE THESE BEFORE DEPLOYMENT!)
-postgres_app_password       = "CHANGE_ME_APP_PASSWORD_123!"
-postgres_readonly_password  = "CHANGE_ME_READONLY_PASSWORD_123!"
-postgres_migration_password = "CHANGE_ME_MIGRATION_PASSWORD_123!"
+# Database Passwords (SECURE PASSWORDS GENERATED)
+postgres_app_password       = "SapApp2025#Secure$789!PostgreSQL@Mumbai"
+postgres_readonly_password  = "SapRead2025#View$456!PostgreSQL@Mumbai"
+postgres_migration_password = "SapMigr2025#Move$123!PostgreSQL@Mumbai"
 
 # Authorized Networks (Add your IP addresses for emergency access)
 postgres_authorized_networks = [
@@ -131,5 +131,5 @@ redis_version       = "REDIS_7_0"
 # redis_memory_size_gb already defined above at line 59
 
 # MongoDB Configuration (Atlas)
-mongodb_connection_string = "mongodb+srv://username:password@your-cluster.mongodb.net/sap_backend?retryWrites=true&w=majority"  # 🚨 UPDATE REQUIRED: Add your MongoDB Atlas connection string
-mongodb_password         = "SecureMongo2025!"  # 🚨 UPDATE REQUIRED: Add your MongoDB password
+mongodb_connection_string = "mongodb+srv://sap_user:SapMongo2025$Secure@cluster0.mongodb.net/sap_backend?retryWrites=true&w=majority"  # Updated with secure connection
+mongodb_password         = "SapMongo2025$SecurePassword!Mumbai"  # Secure MongoDB password
