@@ -237,8 +237,8 @@ variable "node_pool_max_count" {
   default     = 10
   
   validation {
-    condition     = var.node_pool_max_count >= var.node_pool_min_count && var.node_pool_max_count <= 100
-    error_message = "Node pool maximum count must be >= min_count and <= 100."
+    condition     = var.node_pool_max_count >= 1 && var.node_pool_max_count <= 100
+    error_message = "Node pool maximum count must be >= 1 and <= 100."
   }
 }
 
@@ -248,8 +248,8 @@ variable "node_pool_initial_count" {
   default     = 3
   
   validation {
-    condition     = var.node_pool_initial_count >= var.node_pool_min_count && var.node_pool_initial_count <= var.node_pool_max_count
-    error_message = "Node pool initial count must be between min_count and max_count."
+    condition     = var.node_pool_initial_count >= 1 && var.node_pool_initial_count <= 50
+    error_message = "Node pool initial count must be between 1 and 50."
   }
 }
 

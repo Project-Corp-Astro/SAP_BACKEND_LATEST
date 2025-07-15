@@ -92,8 +92,8 @@ output "gke_connection_command" {
   value       = "gcloud container clusters get-credentials ${google_container_cluster.primary.name} --location ${google_container_cluster.primary.location} --project ${var.project_id}"
 }
 
-output "gke_service_accounts" {
-  description = "GKE service accounts"
+output "gke_service_accounts_detailed" {
+  description = "GKE service accounts detailed information"
   value = {
     cluster = {
       email        = google_service_account.gke_cluster.email
