@@ -33,14 +33,12 @@ RUN addgroup -g 1001 -S nodejs && \
 WORKDIR /app
 
 # Copy the packages directory (already built)
-COPY packages/ ./packages/
-
-# Change to content-service directory
+COPY ../../packages/ ./packages/
 
 # Return to app directory and copy content service files
 WORKDIR /app
-COPY services/content-service/package*.json ./
-COPY services/content-service/tsconfig.json ./
+COPY package*.json ./
+COPY tsconfig.json ./
 
 # ================================
 # Stage 2: Development Dependencies  
@@ -51,7 +49,7 @@ FROM base AS development
 RUN npm install --legacy-peer-deps --no-audit --no-fund
 
 # Copy source code directly (no build step - using ts-node in production)
-COPY services/content-service/src/ ./src/
+COPY src/ ./src/
 
 # ================================
 # Stage 3: Production Dependencies
