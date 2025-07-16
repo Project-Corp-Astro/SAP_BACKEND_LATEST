@@ -9,7 +9,7 @@ import {
 } from '../interfaces/video.interfaces';
 import slugifyPkg from 'slugify';
 import { redisUtils, videoCache } from '../utils/redis';
-import esClient from '../../../../shared/utils/elasticsearch';
+import esClient from '../../shared/utils/elasticsearch';
 
 const slugify = (typeof slugifyPkg === 'function') ? slugifyPkg : (slugifyPkg as any).default;
 const VIDEO_INDEX = 'videos';

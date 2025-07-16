@@ -1,7 +1,7 @@
 import { Document, Types } from 'mongoose';
 import { Content, ContentType, ContentStatus, User } from '@corp-astro/shared-types';
 import { ZodiacSign, AstrologyContentType } from './astrology.interfaces';
-import { AuthUser } from '../../../../shared/types/auth-user';
+import { AuthUser } from '../../shared/types/auth-user';
 
 /**
  * Extended Content interface that includes backend-specific properties

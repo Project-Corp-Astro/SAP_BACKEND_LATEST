@@ -1,5 +1,5 @@
 import { redisUtils, contentCache, categoryCache } from '../utils/redis';
-import esClient from '../../../../shared/utils/elasticsearch';
+import esClient from '../../shared/utils/elasticsearch';
 import Content from '../models/Content';
 import Category from '../models/Category';
 import { ContentStatus } from '@corp-astro/shared-types';

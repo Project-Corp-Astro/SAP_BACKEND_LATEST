@@ -1,12 +1,12 @@
 import Redis from 'ioredis';
-import logger from '../../../../shared/utils/logger';
-import config from '../../../../shared/config';
+import logger from '../../shared/utils/logger';
+import config from '../../shared/config';
 import {
   RedisCache,
   createServiceRedisClient,
   SERVICE_DB_MAPPING,
   RedisOptions
-} from '../../../../shared/utils/redis-manager';
+} from '../../shared/utils/redis-manager';
 import type { Redis as IORedis } from 'ioredis';
 
 // Constants

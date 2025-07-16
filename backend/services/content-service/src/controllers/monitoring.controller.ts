@@ -7,11 +7,11 @@
 
 import { Request, Response } from 'express';
 import { redisUtils, contentCache, mediaCache, videoCache, categoryCache } from '../utils/redis';
-import { getRedisHealthMetrics } from '../../../../shared/utils/redis-manager';
+import { getRedisHealthMetrics } from '../../shared/utils/redis-manager';
 import performanceMonitor from '../utils/performance';
 import mongoose from 'mongoose';
 import os from 'os';
-import logger from '../../../../shared/utils/logger';
+import logger from '../../shared/utils/logger';
 
 class MonitoringController {
   /**

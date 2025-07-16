@@ -4,8 +4,8 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "outDir": "./dist",
-    "rootDir": "../../",
-    "baseUrl": "../../",
+    "rootDir": "./",
+    "baseUrl": "./",
     "paths": {
       "@shared/*": ["shared/*"],
       "@corp-astro/shared-types": ["shared/types"],
