@@ -52,7 +52,6 @@
     "analyze": "ts-node scripts/analyze-bundle.ts",
     "docs:generate": "ts-node scripts/generate-docs.ts",
     "type-check": "tsc --noEmit",
-    
     "containerization:validate:module1": "bash scripts/validate-containerization.sh 1",
     "containerization:validate:module2": "bash scripts/validate-module2.sh",
     "containerization:validate:module3": "bash ../scripts/validate-module3.sh",
@@ -66,27 +65,22 @@
     "docker:health": "bash ../scripts/docker-manager.sh health",
     "docker:logs": "bash ../scripts/docker-manager.sh logs",
     "docker:build": "bash ../scripts/docker-manager.sh build",
-    
     "health:check:all": "concurrently \"npm run health:check:gateway\" \"npm run health:check:auth\" \"npm run health:check:user\" \"npm run health:check:content\"",
     "health:check:gateway": "curl -f http://localhost:5001/health || exit 1",
     "health:check:auth": "curl -f http://localhost:3001/health || exit 1",
     "health:check:user": "curl -f http://localhost:3002/health || exit 1",
     "health:check:content": "curl -f http://localhost:3003/health || exit 1",
-    
     "test:services:health": "npm run health:check:all",
     "test:inter-service-communication": "jest --testPathPattern=integration --testNamePattern=\"inter-service\"",
     "test:database-connections": "jest --testPathPattern=database --testNamePattern=\"connection\"",
-    
     "performance:test": "concurrently \"npm run performance:test:memory\" \"npm run performance:test:cpu\"",
     "performance:test:memory": "node scripts/performance/memory-test.js",
     "performance:test:cpu": "node scripts/performance/cpu-test.js",
-    
     "security:scan": "npm run security:scan:trivy && npm run security:scan:snyk",
     "security:scan:trivy": "trivy fs --severity HIGH,CRITICAL .",
     "security:scan:snyk": "snyk test --severity-threshold=high",
     "security:test:secrets": "node scripts/security/secret-scanner.js",
     "security:test:network": "node scripts/security/network-test.js",
-    
     "monitoring:test:alerts": "node scripts/monitoring/alert-test.js",
     "monitoring:verify": "npm run monitoring:test:alerts && curl -f http://localhost:9090/targets"
   },

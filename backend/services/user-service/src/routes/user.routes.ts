@@ -29,11 +29,7 @@ const router: Router = express.Router();
  */
 router.get('/', 
   // asRequestHandler(authMiddleware), 
-<<<<<<< HEAD
-  // asRequestHandler(roleAuthorization([UserRole.ADMIN])),
-=======
   // requirePermission('user:read', { application: 'system',allowSuperadmin:true }),
->>>>>>> 31-rbac-implementation
   wrapController(userController.getUsers)
 );
 

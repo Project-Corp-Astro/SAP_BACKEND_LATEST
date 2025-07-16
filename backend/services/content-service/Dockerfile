@@ -32,26 +32,26 @@ RUN addgroup -g 1001 -S nodejs && \
 # Set working directory
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-COPY tsconfig.json ./
+# Copy the packages directory (already built)
+COPY packages/ ./packages/
+
+# Change to content-service directory
+
+# Return to app directory and copy content service files
+WORKDIR /app
+COPY services/content-service/package*.json ./
+COPY services/content-service/tsconfig.json ./
 
 # ================================
-# Stage 2: Development Dependencies
+# Stage 2: Development Dependencies  
 # ================================
 FROM base AS development
 
-# Install all dependencies
-RUN npm ci --include=dev --no-audit --no-fund
+# Install all dependencies including devDependencies
+RUN npm install --legacy-peer-deps --no-audit --no-fund
 
-# Copy source code
-COPY src/ ./src/
-COPY jest.config.js ./
-
-# Build and test
-RUN npm run build && \
-    npm run test --if-present && \
-    npm cache clean --force
+# Copy source code directly (no build step - using ts-node in production)
+COPY services/content-service/src/ ./src/
 
 # ================================
 # Stage 3: Production Dependencies
@@ -59,7 +59,7 @@ RUN npm run build && \
 FROM base AS production-deps
 
 # Install production dependencies only
-RUN npm ci --omit=dev --no-audit --no-fund && \
+RUN npm install --omit=dev --legacy-peer-deps --no-audit --no-fund && \
     npm cache clean --force
 
 # ================================
@@ -94,9 +94,14 @@ WORKDIR /app
 # Copy production dependencies
 COPY --from=production-deps --chown=contentuser:nodejs /app/node_modules ./node_modules
 
-# Copy built application
-COPY --from=development --chown=contentuser:nodejs /app/dist ./dist
+# Copy the built packages  
+COPY --from=development --chown=contentuser:nodejs /app/packages ./packages
+
+# Copy source application and packages
+COPY --from=development --chown=contentuser:nodejs /app/src ./src
+COPY --from=development --chown=contentuser:nodejs /app/packages ./packages
 COPY --from=development --chown=contentuser:nodejs /app/package.json ./
+COPY --from=development --chown=contentuser:nodejs /app/tsconfig.json ./
 
 # Create content directories with proper permissions
 RUN mkdir -p /app/logs /app/uploads /app/media /app/temp && \
@@ -120,8 +125,8 @@ EXPOSE 3005
 # Signal handling
 ENTRYPOINT ["dumb-init", "--"]
 
-# Start content service
-CMD ["node", "dist/index.js"]
+# Start content service with ts-node
+CMD ["npm", "start"]
 
 # ================================
 # Metadata

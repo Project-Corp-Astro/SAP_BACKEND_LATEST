@@ -40,7 +40,7 @@ COPY tsconfig.json ./
 FROM base AS development
 
 # Install all dependencies
-RUN npm ci --include=dev --no-audit --no-fund
+RUN npm install --include=dev --legacy-peer-deps --no-audit --no-fund
 
 # Copy source code
 COPY src/ ./src/
@@ -57,7 +57,7 @@ RUN npm run build && \
 FROM base AS production-deps
 
 # Install production dependencies only
-RUN npm ci --omit=dev --no-audit --no-fund && \
+RUN npm install --omit=dev --legacy-peer-deps --no-audit --no-fund && \
     npm cache clean --force
 
 # ================================
