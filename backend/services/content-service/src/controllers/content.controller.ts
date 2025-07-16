@@ -3,7 +3,7 @@
 import { Request, Response, NextFunction } from 'express';
 import * as contentService from '../services/content.service';
 import { createServiceLogger } from '../utils/sharedLogger';
-import { ContentStatus, ContentType } from '@corp-astro/shared-types';
+import { ContentStatus, ContentType } from '../types';
 import { RequestUser } from '../interfaces/shared-types';
 
 const logger = createServiceLogger('content-controller');

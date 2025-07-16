@@ -1,6 +1,6 @@
 import mongoose, { Schema, model, Document } from 'mongoose';
 import { ContentDocument } from '../interfaces/shared-types';
-import { ContentStatus } from '@corp-astro/shared-types';
+import { ContentStatus } from '../types';
 
 const contentSchema = new Schema({
   title: {

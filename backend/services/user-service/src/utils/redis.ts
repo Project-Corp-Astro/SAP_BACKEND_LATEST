@@ -1,7 +1,8 @@
-import { RedisCache, createServiceRedisClient, SERVICE_DB_MAPPING } from '../../../../shared/utils/redis-manager';
 import type { Redis as IORedis } from 'ioredis';
-import logger from '../../../../shared/utils/logger';
-import config from '../../../../shared/config';
+import { logger, redisManager, config } from './sharedModules';
+
+// Extract utilities from redisManager
+const { RedisCache, createServiceRedisClient, SERVICE_DB_MAPPING } = redisManager;
 
 const SERVICE_NAME = 'user';
 
@@ -104,9 +105,9 @@ const redisUtils: RedisUtils = {
 
   async get<T = any>(key: string): Promise<T | null> {
     try {
-      const value = await defaultCache.get<T>(key);
+      const value = await defaultCache.get(key);
       this.stats.defaultCache[value ? 'hits' : 'misses']++;
-      return value;
+      return value as T;
     } catch (error: unknown) {
       this.stats.defaultCache.misses++;
       try {
@@ -234,7 +235,7 @@ const redisUtils: RedisUtils = {
   async getCachedUser(userId: string): Promise<any> {
     try {
       const cacheKey = `${userId}:user`;
-      const value = await userCache.get<any>(cacheKey);
+      const value = await userCache.get(cacheKey);
       this.stats.userCache[value ? 'hits' : 'misses']++;
       return value;
     } catch (error: unknown) {
@@ -257,7 +258,7 @@ const redisUtils: RedisUtils = {
   async getCachedRolePermission(rolePermissionId: string): Promise<any> {
     try {
       const cacheKey = `${rolePermissionId}:rolePermission`;
-      const value = await rolePermissionCache.get<any>(cacheKey);
+      const value = await rolePermissionCache.get(cacheKey);
       this.stats.rolePermissionCache[value ? 'hits' : 'misses']++;
       return value;
     } catch (error: unknown) {

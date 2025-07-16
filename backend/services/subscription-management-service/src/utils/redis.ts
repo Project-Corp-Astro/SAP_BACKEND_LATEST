@@ -1,14 +1,15 @@
 import Redis from 'ioredis';
-import config from '../config';
-import logger from './logger';
-import {
+import { logger, redisManager, config } from './sharedModules';
+import { CacheKeyUtils } from './cache-key-utils';
+
+// Extract utilities from redisManager
+const {
   RedisCache,
   createServiceRedisClient,
   SERVICE_DB_MAPPING,
   RedisOptions
-} from '../../../../shared/utils/redis-manager';
+} = redisManager;
 import type { Redis as IORedis } from 'ioredis';
-import { CacheKeyUtils } from './cache-key-utils';
 
 // Constants
 const SERVICE_NAME = 'subscription';
@@ -22,9 +23,9 @@ const promoCache = new RedisCache(SERVICE_NAME, { keyPrefix: `${SERVICE_NAME}:pr
 
 // Create standard Redis client instance
 const redisClient: IORedis = createServiceRedisClient(SERVICE_NAME, {
-  host: config.redis.host,
-  port: config.redis.port,
-  password: config.redis.password || undefined,
+  host: config.get ? config.get('redis.host', 'localhost') : config.redis.host,
+  port: config.get ? parseInt(config.get('redis.port', '6379')) : config.redis.port,
+  password: (config.get ? config.get('redis.password', '') : config.redis.password) || undefined,
   db: SERVICE_DB_MAPPING[SERVICE_NAME] || DB_NUMBER
 });
 
@@ -127,9 +128,9 @@ const redisUtils: RedisUtils = {
 
   async get<T>(key: string): Promise<T | null> {
     try {
-      const value = await defaultCache.get<T>(key);
+      const value = await defaultCache.get(key);
       this.stats.defaultCache[value ? 'hits' : 'misses']++;
-      return value;
+      return value as T;
     } catch (error: unknown) {
       this.stats.defaultCache.misses++;
       try {
@@ -210,31 +211,31 @@ const redisUtils: RedisUtils = {
     const closePromises: Promise<string>[] = [];
 
     closePromises.push(
-      defaultCache.getClient().quit().catch(error => {
+      defaultCache.getClient().quit().catch((error: any) => {
         errors.push({ client: 'default', error: (error as Error).message });
         return '';
       })
     );
     closePromises.push(
-      planCache.getClient().quit().catch(error => {
+      planCache.getClient().quit().catch((error: any) => {
         errors.push({ client: 'plan', error: (error as Error).message });
         return '';
       })
     );
     closePromises.push(
-      userSubsCache.getClient().quit().catch(error => {
+      userSubsCache.getClient().quit().catch((error: any) => {
         errors.push({ client: 'user-subs', error: (error as Error).message });
         return '';
       })
     );
     closePromises.push(
-      promoCache.getClient().quit().catch(error => {
+      promoCache.getClient().quit().catch((error: any) => {
         errors.push({ client: 'promo', error: (error as Error).message });
         return '';
       })
     );
     closePromises.push(
-      redisClient.quit().catch(error => {
+      redisClient.quit().catch((error: any) => {
         errors.push({ client: 'legacy', error: (error as Error).message });
         return '';
       })

@@ -1,11 +1,12 @@
-import logger from '../../../../shared/utils/logger';
-import config from '../../../../shared/config';
-import {
+import type { Redis as IORedis } from 'ioredis';
+import { logger, redisManager, config } from './sharedModules';
+
+// Extract utilities from redisManager
+const {
   RedisCache,
   createServiceRedisClient,
   SERVICE_DB_MAPPING,
-} from '../../../../shared/utils/redis-manager';
-import type { Redis as IORedis } from 'ioredis';
+} = redisManager;
 
 // Constants
 const SERVICE_NAME = 'auth';
@@ -267,7 +268,7 @@ const redisUtils = {
     try {
       const key = `failed:${username}:${ip}`;
       const fullKey = `auth:${key}`;
-      const attempts = await defaultCache.get<number>(key) || 0;
+      const attempts = (await defaultCache.get(key) as number) || 0;
       const newAttempts = attempts + 1;
       
       const success = await defaultCache.set(key, newAttempts, 1800);

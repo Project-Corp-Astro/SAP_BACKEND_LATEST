@@ -1,5 +1,5 @@
 import { redisUtils, mediaCache } from '../utils/redis';
-import esClient from '../../shared/utils/elasticsearch';
+import { esClient } from '../utils/sharedModules';
 import Media from '../models/Media';
 import { MediaDocument, MediaFilter, MediaPaginationResult, MediaType } from '../interfaces/media.interfaces';
 import { ContentStatus } from '../interfaces/content.interfaces';

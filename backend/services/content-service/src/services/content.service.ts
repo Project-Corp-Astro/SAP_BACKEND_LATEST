@@ -1,8 +1,8 @@
 import { redisUtils, contentCache, categoryCache } from '../utils/redis';
-import esClient from '../../shared/utils/elasticsearch';
+import { esClient } from '../utils/sharedModules';
 import Content from '../models/Content';
 import Category from '../models/Category';
-import { ContentStatus } from '@corp-astro/shared-types';
+import { ContentStatus } from '../types';
 import { RequestUser, ExtendedContent, ContentDocument, CategoryDocument } from '../interfaces/shared-types';
 
 const logger = {

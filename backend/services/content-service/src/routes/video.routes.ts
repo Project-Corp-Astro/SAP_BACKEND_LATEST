@@ -3,13 +3,12 @@
 import { Router, RequestHandler } from 'express';
 import videoController from '../controllers/video.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
-import { requirePermission } from '../../../user-service/src/middlewares/requirePermission';
+import { requireRemotePermission } from '@corp-astro/permission-client';
 
 const router = Router();
 
 router.use(authMiddleware as RequestHandler);
-router.use( requirePermission
-  ('video:manage', { application: 'cms',allowSuperadmin:true }),)
+router.use(requireRemotePermission('video:manage', { application: 'cms', allowSuperadmin: true }));
 
 // Public Routes
 router.get('/', videoController.getVideos as RequestHandler);

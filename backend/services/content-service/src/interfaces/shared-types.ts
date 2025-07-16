@@ -1,7 +1,6 @@
 import { Document, Types } from 'mongoose';
-import { Content, ContentType, ContentStatus, User } from '@corp-astro/shared-types';
+import { Content, ContentType, ContentStatus, User, AuthUser } from '../types';
 import { ZodiacSign, AstrologyContentType } from './astrology.interfaces';
-import { AuthUser } from '../../shared/types/auth-user';
 
 /**
  * Extended Content interface that includes backend-specific properties
@@ -12,6 +11,7 @@ export interface ExtendedContent extends Omit<Content, 'author'> {
   tags?: string[];
   featuredImage?: string;
   author: Author | string; // Allow both Author object and string ID for flexibility
+  publishedAt?: Date;
   archivedAt?: Date;
   viewCount?: number;
   likeCount?: number;

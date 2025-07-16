@@ -223,7 +223,7 @@ if (mongoose.models.User) {
   };
 
   // Static method to find active users
-  userSchema.statics.findActive = function(this: UserModel): Promise<UserDocument[]> {
+  userSchema.statics.findActive = function(this: UserModel) {
     return this.find({ isActive: true });
   };
 

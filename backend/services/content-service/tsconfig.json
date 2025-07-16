@@ -23,6 +23,6 @@
     "noImplicitThis": false,
     "typeRoots": ["./node_modules/@types", "./src/types"]
   },
-  "include": ["src/**/*", "src/**/*.d.ts", "../../shared/**/*"],
+  "include": ["src/**/*", "src/**/*.d.ts"],
   "exclude": ["node_modules"]
 }

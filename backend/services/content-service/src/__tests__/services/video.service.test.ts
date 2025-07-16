@@ -42,6 +42,13 @@ describe('Video Service', () => {
     slug: 'test-video'
   };
 
+  const mockUser = {
+    _id: '123456789012345678901234',
+    email: 'test@example.com',
+    username: 'testuser',
+    role: 'admin' as const
+  };
+
   afterEach(async () => {
     await Video.deleteMany({});
   });
@@ -204,7 +211,7 @@ describe('Video Service', () => {
         description: 'Updated description',
       };
       
-      const updatedVideo = await videoService.updateVideo(videoId, updateData);
+      const updatedVideo = await videoService.updateVideo(videoId, updateData, mockUser);
       
       expect(updatedVideo).not.toBeNull();
       expect(updatedVideo?.title).toBe(updateData.title);
@@ -215,7 +222,7 @@ describe('Video Service', () => {
     it('should return null if video not found', async () => {
       const nonExistentId = new mongoose.Types.ObjectId().toString();
       
-      const updatedVideo = await videoService.updateVideo(nonExistentId, { title: 'New Title' });
+      const updatedVideo = await videoService.updateVideo(nonExistentId, { title: 'New Title' }, mockUser);
       expect(updatedVideo).toBeNull();
     });
 
@@ -224,7 +231,7 @@ describe('Video Service', () => {
         status: 'published',
       };
       
-      const updatedVideo = await videoService.updateVideo(videoId, updateData);
+      const updatedVideo = await videoService.updateVideo(videoId, updateData, mockUser);
       
       expect(updatedVideo).not.toBeNull();
       expect(updatedVideo?.status).toBe('published');
@@ -240,7 +247,7 @@ describe('Video Service', () => {
       });
       
       // Update first video to have the same title as second
-      const updatedVideo = await videoService.updateVideo(videoId, { title: 'Another Video' });
+      const updatedVideo = await videoService.updateVideo(videoId, { title: 'Another Video' }, mockUser);
       
       expect(updatedVideo).not.toBeNull();
       expect(updatedVideo?.title).toBe('Another Video');
@@ -258,7 +265,7 @@ describe('Video Service', () => {
     });
 
     it('should delete video', async () => {
-      const deletedVideo = await videoService.deleteVideo(videoId);
+      const deletedVideo = await videoService.deleteVideo(videoId, mockUser);
       
       expect(deletedVideo).not.toBeNull();
       expect(deletedVideo?._id.toString()).toBe(videoId);
@@ -270,7 +277,7 @@ describe('Video Service', () => {
     it('should return null if video not found', async () => {
       const nonExistentId = new mongoose.Types.ObjectId().toString();
       
-      const deletedVideo = await videoService.deleteVideo(nonExistentId);
+      const deletedVideo = await videoService.deleteVideo(nonExistentId, mockUser);
       expect(deletedVideo).toBeNull();
     });
   });

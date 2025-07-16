@@ -33,7 +33,7 @@ class MediaController {
       const mediaData = req.body;
       if (req.user) {
         mediaData.author = {
-          id: req.user.userId,
+          id: req.user._id,
           name: (req.user as any).name || req.user.email.split('@')[0] || 'Unknown',
           email: req.user.email
         };
