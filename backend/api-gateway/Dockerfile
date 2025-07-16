@@ -41,13 +41,13 @@ FROM base AS development
 # Install all dependencies (including devDependencies)
 RUN npm ci --include=dev --no-audit --no-fund
 
-# Copy source code
+# Copy source code and build files
 COPY src/ ./src/
 COPY typedoc.json ./
 
 # Build the application
 RUN npm run build && \
-    npm run docs && \
+    (npm run docs || echo "Documentation generation failed, continuing...") && \
     npm cache clean --force
 
 # ================================
