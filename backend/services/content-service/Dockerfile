@@ -101,6 +101,9 @@ RUN npm install -g ts-node typescript
 # Copy the built packages  
 COPY --from=development --chown=contentuser:nodejs /app/packages ./packages
 
+# Copy the shared directory for shared utilities
+COPY --from=development --chown=contentuser:nodejs /app/shared ./shared
+
 # Copy source application and packages
 COPY --from=development --chown=contentuser:nodejs /app/src ./src
 COPY --from=development --chown=contentuser:nodejs /app/packages ./packages
