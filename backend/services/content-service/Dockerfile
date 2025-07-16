@@ -58,8 +58,8 @@ COPY services/content-service/src/ ./src/
 # ================================
 FROM base AS production-deps
 
-# Install production dependencies only
-RUN npm install --omit=dev --legacy-peer-deps --no-audit --no-fund && \
+# Install ALL dependencies including dev dependencies for ts-node runtime
+RUN npm install --legacy-peer-deps --no-audit --no-fund && \
     npm cache clean --force
 
 # ================================
