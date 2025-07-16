@@ -40,8 +40,9 @@ COPY ../../shared/ ./shared/
 
 # Return to app directory and copy content service files
 WORKDIR /app
-COPY package*.json ./
-COPY tsconfig.json ./
+COPY services/content-service/package.json ./
+COPY services/content-service/package-lock.json ./
+COPY services/content-service/tsconfig.json ./
 
 # ================================
 # Stage 2: Development Dependencies  
