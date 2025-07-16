@@ -104,9 +104,8 @@ COPY --from=development --chown=contentuser:nodejs /app/packages ./packages
 # Copy the shared directory for shared utilities
 COPY --from=development --chown=contentuser:nodejs /app/shared ./shared
 
-# Copy source application and packages
+# Copy source application files
 COPY --from=development --chown=contentuser:nodejs /app/src ./src
-COPY --from=development --chown=contentuser:nodejs /app/packages ./packages
 COPY --from=development --chown=contentuser:nodejs /app/package.json ./
 COPY --from=development --chown=contentuser:nodejs /app/tsconfig.json ./
 
