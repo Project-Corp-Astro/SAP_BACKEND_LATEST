@@ -35,6 +35,9 @@ WORKDIR /app
 # Copy the packages directory (already built)
 COPY ../../packages/ ./packages/
 
+# Copy the shared directory for shared utilities
+COPY ../../shared/ ./shared/
+
 # Return to app directory and copy content service files
 WORKDIR /app
 COPY package*.json ./
