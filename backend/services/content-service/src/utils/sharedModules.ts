@@ -10,7 +10,7 @@ let logger: any;
 try {
   if (process.env.NODE_ENV === 'production' || process.cwd() === '/app') {
     // In Docker/production
-    logger = require('../../shared/utils/logger');
+    logger = require('../../../shared/utils/logger');
   } else {
     // In local development, create a simple logger
     logger = {
@@ -34,7 +34,7 @@ try {
 let redisManager: any;
 try {
   if (process.env.NODE_ENV === 'production' || process.cwd() === '/app') {
-    redisManager = require('../../shared/utils/redis-manager');
+    redisManager = require('../../../shared/utils/redis-manager');
   } else {
     // Mock Redis manager for local development
     redisManager = {
@@ -78,7 +78,7 @@ try {
 let esClient: any;
 try {
   if (process.env.NODE_ENV === 'production' || process.cwd() === '/app') {
-    esClient = require('../../shared/utils/elasticsearch');
+    esClient = require('../../../shared/utils/elasticsearch');
   } else {
     // Mock Elasticsearch for local development
     esClient = {
@@ -102,7 +102,7 @@ try {
 let config: any;
 try {
   if (process.env.NODE_ENV === 'production' || process.cwd() === '/app') {
-    config = require('../../shared/config');
+    config = require('../../../shared/config').default;
   } else {
     // Local development config with get method
     config = {
