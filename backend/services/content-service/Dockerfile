@@ -41,7 +41,6 @@ COPY ../../shared/ ./shared/
 # Return to app directory and copy content service files
 WORKDIR /app
 COPY services/content-service/package.json ./
-COPY services/content-service/package-lock.json ./
 COPY services/content-service/tsconfig.json ./
 
 # ================================
@@ -53,7 +52,7 @@ FROM base AS development
 RUN npm install --legacy-peer-deps --no-audit --no-fund
 
 # Copy source code directly (no build step - using ts-node in production)
-COPY src/ ./src/
+COPY services/content-service/src/ ./src/
 
 # ================================
 # Stage 3: Production Dependencies
