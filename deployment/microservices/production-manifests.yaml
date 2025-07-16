@@ -253,7 +253,7 @@ spec:
     spec:
       containers:
       - name: content-service
-        image: gcr.io/sap-project-466005/sap-content-service:latest
+        image: gcr.io/sap-project-466005/content-service:latest
         ports:
         - containerPort: 3005
         env:
