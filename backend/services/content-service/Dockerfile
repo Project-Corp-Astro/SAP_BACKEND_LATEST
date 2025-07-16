@@ -94,6 +94,9 @@ WORKDIR /app
 # Copy production dependencies
 COPY --from=production-deps --chown=contentuser:nodejs /app/node_modules ./node_modules
 
+# Install ts-node globally for runtime execution
+RUN npm install -g ts-node typescript
+
 # Copy the built packages  
 COPY --from=development --chown=contentuser:nodejs /app/packages ./packages
 
