@@ -59,8 +59,11 @@ FROM base AS development
 # Install all dependencies including devDependencies and local packages
 RUN npm install --legacy-peer-deps --no-audit --no-fund
 
-# Copy source code directly (no build step - using ts-node in production)
+# Copy source code and compile TypeScript
 COPY services/content-service/src/ ./src/
+
+# Compile TypeScript to JavaScript
+RUN npm run build
 
 # ================================
 # Stage 3: Production Dependencies
@@ -103,19 +106,15 @@ WORKDIR /app
 # Copy production dependencies
 COPY --from=production-deps --chown=contentuser:nodejs /app/node_modules ./node_modules
 
-# Install ts-node globally for runtime execution
-RUN npm install -g ts-node typescript
-
 # Copy the built packages  
 COPY --from=development --chown=contentuser:nodejs /app/packages ./packages
 
 # Copy the shared directory for shared utilities
 COPY --from=development --chown=contentuser:nodejs /app/shared ./shared
 
-# Copy source application files
-COPY --from=development --chown=contentuser:nodejs /app/src ./src
+# Copy compiled application files
+COPY --from=development --chown=contentuser:nodejs /app/dist ./dist
 COPY --from=development --chown=contentuser:nodejs /app/package.json ./
-COPY --from=development --chown=contentuser:nodejs /app/tsconfig.json ./
 
 # Create content directories with proper permissions
 RUN mkdir -p /app/logs /app/uploads /app/media /app/temp && \
