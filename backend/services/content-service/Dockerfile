@@ -57,7 +57,7 @@ RUN npm install --legacy-peer-deps
 FROM base AS development
 
 # Install all dependencies including devDependencies and local packages
-RUN npm install --legacy-peer-deps --no-audit --no-fund
+RUN npm install --legacy-peer-deps --include=dev --no-audit --no-fund
 
 # Copy source code and compile TypeScript
 COPY services/content-service/src/ ./src/
@@ -70,8 +70,11 @@ RUN npm run build
 # ================================
 FROM base AS production-deps
 
-# Install ALL dependencies including dev dependencies for ts-node runtime and local packages
-RUN npm install --legacy-peer-deps --no-audit --no-fund && \
+# Temporarily set NODE_ENV to development to install all deps including devDependencies
+ENV NODE_ENV=development
+
+# Install ALL dependencies including dev dependencies and local packages
+RUN npm install --legacy-peer-deps --include=dev --no-audit --no-fund && \
     npm cache clean --force
 
 # ================================
