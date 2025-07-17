@@ -48,8 +48,8 @@ WORKDIR /app
 COPY services/content-service/package.json ./
 COPY services/content-service/tsconfig.json ./
 
-# Install the local package first to establish the link
-RUN npm install ./packages --legacy-peer-deps
+# Install the local package using file: protocol (this should work with the built package)
+RUN npm install --legacy-peer-deps
 
 # ================================
 # Stage 2: Development Dependencies  
