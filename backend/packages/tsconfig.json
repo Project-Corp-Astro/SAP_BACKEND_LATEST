@@ -8,7 +8,9 @@
       "esModuleInterop": true,
       "skipLibCheck": true,
       "forceConsistentCasingInFileNames": true,
-      "lib": ["es2018"]
+      "lib": ["es2018", "dom"],
+      "types": ["node"],
+      "moduleResolution": "node"
     },
     "include": ["src/**/*"],
     "exclude": ["node_modules", "**/__tests__/*", "dist", "**/*.test.ts", "**/*.spec.ts"]
