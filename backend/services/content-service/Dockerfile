@@ -48,12 +48,15 @@ WORKDIR /app
 COPY services/content-service/package.json ./
 COPY services/content-service/tsconfig.json ./
 
+# Install the local package first to establish the link
+RUN npm install ./packages --legacy-peer-deps
+
 # ================================
 # Stage 2: Development Dependencies  
 # ================================
 FROM base AS development
 
-# Install all dependencies including devDependencies
+# Install all dependencies including devDependencies and local packages
 RUN npm install --legacy-peer-deps --no-audit --no-fund
 
 # Copy source code directly (no build step - using ts-node in production)
@@ -64,7 +67,7 @@ COPY services/content-service/src/ ./src/
 # ================================
 FROM base AS production-deps
 
-# Install ALL dependencies including dev dependencies for ts-node runtime
+# Install ALL dependencies including dev dependencies for ts-node runtime and local packages
 RUN npm install --legacy-peer-deps --no-audit --no-fund && \
     npm cache clean --force
 
