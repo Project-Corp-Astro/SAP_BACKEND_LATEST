@@ -5,7 +5,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import mongoose from 'mongoose';
 import http from 'http';
-import { Server as SocketServer } from 'socket.io';
+import { Server as SocketServer, Socket } from 'socket.io';
 import logger, { requestLogger, errorLogger } from './utils/logger';
 import { trackResponseTime, trackDatabasePerformance } from './middlewares/performance.middleware';
 import config from './config';
@@ -106,7 +106,7 @@ const createAndStartServer = (port: number) => {
   });
   
   // Socket.io connection handler
-  io.on('connection', (socket) => {
+  io.on('connection', (socket: Socket) => {
     logger.info('New client connected');
     
     // Handle client disconnection
