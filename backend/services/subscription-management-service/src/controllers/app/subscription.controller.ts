@@ -52,7 +52,7 @@ export class AppSubscriptionController {
     }
 
     logger.debug('Fetching subscriptions for user', { userId, appId });
-    const subscriptions = await subscriptionService.getUserSubscriptions(userId, appId);
+    const subscriptions = await subscriptionService.getUserSubscriptions(userId.toString(), appId);
 
     logger.debug('Subscriptions retrieved successfully', { count: subscriptions.length });
 
@@ -95,7 +95,7 @@ export class AppSubscriptionController {
       status: 'pending', // Will be updated after payment or trial setup
     };
 
-    const subscription = await subscriptionService.createSubscription(planId, userId, appId, promoCode);
+    const subscription = await subscriptionService.createSubscription(planId, userId.toString(), appId, promoCode);
 
     return res.status(201).json(subscription);
   });
@@ -115,7 +115,7 @@ export class AppSubscriptionController {
     // Cancel subscription (user can only cancel their own subscriptions)
     const subscription = await subscriptionService.cancelSubscription(
       subscriptionId,
-      userId,
+      userId.toString(),
       cancelImmediately
     );
 
@@ -154,7 +154,7 @@ export class AppSubscriptionController {
     }
 
     // Validate the promo code
-    const validation = await promoCodeService.validatePromoCode(code, userId, planId);
+    const validation = await promoCodeService.validatePromoCode(code, userId.toString(), planId);
 
     if (!validation.isValid) {
       return res.status(400).json({

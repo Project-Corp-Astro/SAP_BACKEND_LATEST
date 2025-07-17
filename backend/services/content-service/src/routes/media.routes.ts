@@ -9,7 +9,7 @@ import { requireRemotePermission } from '@corp-astro/permission-client';
 const router: Router = express.Router();
 
 router.use(authMiddleware as RequestHandler);
-router.use(requireRemotePermission('media:manage', { application: 'cms', allowSuperadmin: true }));
+router.use(requireRemotePermission('media:manage', { application: 'cms', allowSuperadmin: true }) as any);
 
 /**
  * @route GET /api/media

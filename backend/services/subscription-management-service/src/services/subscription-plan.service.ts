@@ -48,7 +48,7 @@ export class SubscriptionPlanService {
       const fullCacheKey = `subscription:apps:${cacheKey}`;
 
       // Try to get from cache first
-      const cachedResult = await planCache.get<{ id: string; name: string; color: string; logo: string }[]>(cacheKey).catch((cacheError: Error) => {
+      const cachedResult = await planCache.get(cacheKey).catch((cacheError: Error) => {
         logger.warn(`Error fetching from cache for key ${fullCacheKey} in Redis DB${this.redisDb}:`, {
           error: cacheError.message,
           stack: cacheError.stack,
@@ -229,7 +229,7 @@ export class SubscriptionPlanService {
       const fullCacheKey = `subscription:plans:${cacheKey}`;
 
       // Try to get from cache first
-      const cachedResult = await planCache.get<{ plans: SubscriptionPlan[]; total: number }>(cacheKey).catch((cacheError: Error) => {
+      const cachedResult = await planCache.get(cacheKey).catch((cacheError: Error) => {
         logger.warn(`Error fetching from cache for key ${fullCacheKey} in Redis DB${this.redisDb}:`, {
           error: cacheError.message,
           stack: cacheError.stack,
@@ -331,7 +331,7 @@ export class SubscriptionPlanService {
       const fullCacheKey = `subscription:plans:${cacheKey}`;
 
       // Try to get from cache first
-      const cachedPlan = await planCache.get<SubscriptionPlan>(cacheKey).catch((cacheError: Error) => {
+      const cachedPlan = await planCache.get(cacheKey).catch((cacheError: Error) => {
         logger.warn(`Error fetching from cache for key ${fullCacheKey} in Redis DB${this.redisDb}:`, {
           error: cacheError.message,
           stack: cacheError.stack,

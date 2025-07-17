@@ -18,7 +18,7 @@ router.get('/subscriptions',
         'subscription:read', {
         application: "billing",
         allowSuperadmin: true
-      }) as RequestHandler,
+      }) as any as RequestHandler,
     adminSubscriptionController.getAllSubscriptions);
 
 router.get('/subscriptions/app/:appId',
@@ -26,7 +26,7 @@ router.get('/subscriptions/app/:appId',
         'subscription:read',
         { application: 'billing',
             allowSuperadmin: true
-        }) as RequestHandler,
+        }) as any as RequestHandler,
     adminSubscriptionController.getSubscriptionsByApp);
 
 router.get('/subscriptions/user/:userId',
@@ -34,7 +34,7 @@ router.get('/subscriptions/user/:userId',
         'subscription:read',
         { application: 'billing',
             allowSuperadmin: true
-        }) as RequestHandler,
+        }) as any as RequestHandler,
     adminSubscriptionController.getUserSubscriptions);
 
 router.post('/subscriptions',
@@ -42,7 +42,7 @@ router.post('/subscriptions',
         'subscription:create',
         { application: 'billing',
             allowSuperadmin: true
-        }) as RequestHandler,
+        }) as any as RequestHandler,
     adminSubscriptionController.createSubscription);
 
 router.get('/subscriptions/:id',
@@ -50,7 +50,7 @@ router.get('/subscriptions/:id',
         'subscription:read',
         { application: 'billing',
             allowSuperadmin: true
-        }) as RequestHandler,
+        }) as any as RequestHandler,
     adminSubscriptionController.getSubscriptionById);
 
 router.patch('/subscriptions/:id/status',
@@ -58,7 +58,7 @@ router.patch('/subscriptions/:id/status',
         'subscription:update',
         { application: 'billing',
             allowSuperadmin: true
-        }) as RequestHandler,
+        }) as any as RequestHandler,
     adminSubscriptionController.updateSubscriptionStatus);
 
 router.post('/subscriptions/:id/renew',
@@ -66,7 +66,7 @@ router.post('/subscriptions/:id/renew',
         'subscription:upgrade',
         { application: 'billing',
             allowSuperadmin: true
-        }) as RequestHandler,
+        }) as any as RequestHandler,
     adminSubscriptionController.renewSubscription);
 
 // Subscription plan routes
@@ -75,7 +75,7 @@ router.get('/plans',
         'subscription:read',
         { application: 'billing',
             allowSuperadmin: true
-        }) as RequestHandler,
+        }) as any as RequestHandler,
     adminSubscriptionPlanController.getAllPlans);
 
 router.get('/plans/:id',
@@ -83,7 +83,7 @@ router.get('/plans/:id',
         'subscription:read',
         { application: 'billing',
             allowSuperadmin: true
-        }) as RequestHandler,
+        }) as any as RequestHandler,
     adminSubscriptionPlanController.getPlanById);
 
 router.post('/plans',
@@ -91,7 +91,7 @@ router.post('/plans',
         'subscription:create',
         { application: 'billing',
             allowSuperadmin: true
-        }) as RequestHandler,
+        }) as any as RequestHandler,
     adminSubscriptionPlanController.createPlan);
 
 router.put('/plans/:id',
@@ -99,7 +99,7 @@ router.put('/plans/:id',
         'subscription:update',
         { application: 'billing',
             allowSuperadmin: true
-        }) as RequestHandler,
+        }) as any as RequestHandler,
     adminSubscriptionPlanController.updatePlan);
 
 router.delete('/plans/:id',
@@ -107,7 +107,7 @@ router.delete('/plans/:id',
         'subscription:cancel',
         { application: 'billing',
             allowSuperadmin: true
-        }) as RequestHandler,
+        }) as any as RequestHandler,
     adminSubscriptionPlanController.deletePlan);
 
 router.delete('/plans/:id/permanent',
@@ -115,7 +115,7 @@ router.delete('/plans/:id/permanent',
         'subscription:cancel',
         { application: 'billing',
             allowSuperadmin: true
-        }) as RequestHandler,
+        }) as any as RequestHandler,
     adminSubscriptionPlanController.hardDeletePlan);
 
 // Plan feature routes
@@ -124,7 +124,7 @@ router.post('/plans/:planId/features',
         'subscription:create',
         { application: 'billing',
             allowSuperadmin: true
-        }) as RequestHandler,
+        }) as any as RequestHandler,
     adminSubscriptionPlanController.addFeature);
 
 router.put('/features/:featureId',
@@ -132,7 +132,7 @@ router.put('/features/:featureId',
         'subscription:update',
         { application: 'billing',
             allowSuperadmin: true
-        }) as RequestHandler,
+        }) as any as RequestHandler,
     adminSubscriptionPlanController.updateFeature);
 
 router.delete('/features/:featureId',
@@ -140,7 +140,7 @@ router.delete('/features/:featureId',
         'subscription:cancel',
         { application: 'billing',
             allowSuperadmin: true
-        }) as RequestHandler,
+        }) as any as RequestHandler,
     adminSubscriptionPlanController.deleteFeature);
 
 // Promo code analytics routes
@@ -149,7 +149,7 @@ router.get('/promo-codes/analytics',
         'subscription:read',
         { application: 'billing',
             allowSuperadmin: true
-        }) as RequestHandler,
+        }) as any as RequestHandler,
     promoCodeAnalyticsController.getAnalytics);
 
 // Promo code routes
@@ -158,7 +158,7 @@ router.get('/promo-codes',
         'subscription:read',    
         { application: 'billing',
             allowSuperadmin: true
-        }) as RequestHandler,
+        }) as any as RequestHandler,
     adminPromoCodeController.getAllPromoCodes);
 
 router.get('/promo-codes/:id',
@@ -166,28 +166,28 @@ router.get('/promo-codes/:id',
         'subscription:read',    
         { application: 'billing',
             allowSuperadmin: true
-        }) as RequestHandler,
+        }) as any as RequestHandler,
     adminPromoCodeController.getPromoCodeById);
 router.post('/promo-codes',
     requireRemotePermission(
         'subscription:create',    
         { application: 'billing',
             allowSuperadmin: true
-        }) as RequestHandler,
+        }) as any as RequestHandler,
     adminPromoCodeController.createPromoCode);
 router.put('/promo-codes/:id',
     requireRemotePermission(
         'subscription:update',    
         { application: 'billing',
             allowSuperadmin: true
-        }) as RequestHandler,
+        }) as any as RequestHandler,
     adminPromoCodeController.updatePromoCode);
 router.delete('/promo-codes/:id', 
     requireRemotePermission(
         'subscription:cancel',    
         { application: 'billing',
             allowSuperadmin: true
-        }) as RequestHandler,
+        }) as any as RequestHandler,
     adminPromoCodeController.deletePromoCode);
 
 router.get('/apps/dropdown',
@@ -195,7 +195,7 @@ router.get('/apps/dropdown',
         'subscription:read',    
         { application: 'billing',
             allowSuperadmin: true
-        }) as RequestHandler,
+        }) as any as RequestHandler,
     adminSubscriptionPlanController.getAppsForDropdown);
 
 export default router;

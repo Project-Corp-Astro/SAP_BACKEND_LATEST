@@ -102,7 +102,7 @@ export class SubscriptionService {
 
   async getAllSubscriptions(filters: Partial<Subscription> = {}): Promise<Subscription[]> {
     const cacheKey = `subscriptions:${JSON.stringify(filters)}`;
-    const cachedSubscriptions = await userSubsCache.get<Subscription[]>(cacheKey);
+    const cachedSubscriptions = await userSubsCache.get(cacheKey);
     if (cachedSubscriptions) return cachedSubscriptions;
 
     const subscriptions = await this.getSubscriptionRepository().find({
@@ -115,7 +115,7 @@ export class SubscriptionService {
 
   async getSubscriptionsByApp(appId: string): Promise<Subscription[]> {
     const cacheKey = `subscriptions:app:${appId}`;
-    const cachedSubscriptions = await userSubsCache.get<Subscription[]>(cacheKey);
+    const cachedSubscriptions = await userSubsCache.get(cacheKey);
     if (cachedSubscriptions) return cachedSubscriptions;
 
     const subscriptions = await this.getSubscriptionRepository().find({ where: { appId }, relations: ['plan', 'payments'] });
@@ -125,7 +125,7 @@ export class SubscriptionService {
 
   async getUserSubscriptions(userId: string, appId?: string): Promise<Subscription[]> {
     const cacheKey = `subscriptions:user:${userId}:${appId || 'all'}`;
-    const cachedSubscriptions = await userSubsCache.get<Subscription[]>(cacheKey);
+    const cachedSubscriptions = await userSubsCache.get(cacheKey);
     if (cachedSubscriptions) return cachedSubscriptions;
 
     const where: FindOptionsWhere<Subscription> = { userId };
@@ -138,7 +138,7 @@ export class SubscriptionService {
 
   async getSubscriptionById(subscriptionId: string, userId?: string): Promise<Subscription | null> {
     const cacheKey = `subscription:${subscriptionId}:${userId || 'admin'}`;
-    const cachedSubscription = await userSubsCache.get<Subscription>(cacheKey);
+    const cachedSubscription = await userSubsCache.get(cacheKey);
     if (cachedSubscription) return cachedSubscription;
 
     const where: FindOptionsWhere<Subscription> = { id: subscriptionId };

@@ -355,7 +355,7 @@ export class PromoCodeService {
   }
   async getPromoCodeById(id: string): Promise<PromoCode | null> {
     const cacheKey = `promo_code:${id}`;
-    const cachedData = await promoCache.get<PromoCode>(cacheKey);
+    const cachedData = await promoCache.get(cacheKey) as PromoCode;
     if (cachedData) {
       return cachedData;
     }
@@ -534,7 +534,7 @@ export class PromoCodeService {
     message: string;
   }> {
     const cacheKey = `promo_validation:${code}:${userId}:${planId}`;
-    const cachedResult = await promoCache.get<any>(cacheKey);
+    const cachedResult = await promoCache.get(cacheKey) as any;
     if (cachedResult) {
       return cachedResult;
     }

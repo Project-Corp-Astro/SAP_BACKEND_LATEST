@@ -8,7 +8,7 @@ import { requireRemotePermission } from '@corp-astro/permission-client';
 const router = Router();
 
 router.use(authMiddleware as RequestHandler);
-router.use(requireRemotePermission('video:manage', { application: 'cms', allowSuperadmin: true }));
+router.use(requireRemotePermission('video:manage', { application: 'cms', allowSuperadmin: true }) as any);
 
 // Public Routes
 router.get('/', videoController.getVideos as RequestHandler);

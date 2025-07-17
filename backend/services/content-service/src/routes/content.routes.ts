@@ -18,7 +18,7 @@ router.get('/',
     'content:read', 
     { application: 'cms',
         allowSuperadmin: true
-    }) as RequestHandler,
+    }) as any as RequestHandler,
   contentController.getAllContent as RequestHandler);
 
 /**
@@ -32,7 +32,7 @@ router.post(
     'content:create', 
     { application: 'cms',
         allowSuperadmin: true
-    }) as RequestHandler,
+    }) as any as RequestHandler,
   contentController.createContent as RequestHandler,
 );
 
@@ -46,7 +46,7 @@ router.get('/articles',
     'content:read', 
     { application: 'cms',
         allowSuperadmin: true
-    }) as RequestHandler,
+    }) as any as RequestHandler,
   contentController.getArticles as RequestHandler);
 
 /**
@@ -59,7 +59,7 @@ router.get('/categories',
     'content:read', 
     { application: 'cms',
         allowSuperadmin: true
-    }) as RequestHandler,
+    }) as any as RequestHandler,
   contentController.getAllCategories as RequestHandler);
 
 /**
@@ -72,7 +72,7 @@ router.get('/slug/:slug',
     'content:read', 
     { application: 'cms',
         allowSuperadmin: true
-    }) as RequestHandler,
+    }) as any as RequestHandler,
   contentController.getContentBySlug as RequestHandler);
 
 /**
@@ -85,7 +85,7 @@ router.get('/:contentId',
     'content:read', 
     { application: 'cms',
         allowSuperadmin: true
-    }) as RequestHandler,
+    }) as any as RequestHandler,
 contentController.getContentById as RequestHandler);
 
 /**
@@ -99,7 +99,7 @@ router.put(
     'content:update', 
     { application: 'cms',
         allowSuperadmin: true
-    }) as RequestHandler,
+    }) as any as RequestHandler,
   contentController.updateContent as RequestHandler,
 );
 
@@ -114,7 +114,7 @@ router.delete(
     'content:delete', 
     { application: 'cms',
         allowSuperadmin: true
-    }) as RequestHandler,
+    }) as any as RequestHandler,
   contentController.deleteContent as RequestHandler,
 );
 
@@ -129,7 +129,7 @@ router.patch(
     'content:update', 
     { application: 'cms',
         allowSuperadmin: true
-    }) as RequestHandler,
+    }) as any as RequestHandler,
   contentController.updateContentStatus as RequestHandler,
 );
 
@@ -144,7 +144,7 @@ router.post(
     'content:create', 
     { application: 'cms',
         allowSuperadmin: true
-    }) as RequestHandler,
+    }) as any as RequestHandler,
   contentController.createCategory as RequestHandler,
 );
 

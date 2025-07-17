@@ -14,7 +14,7 @@ router.get('/',
         'analytics:view',    
         { application: 'billing',
             allowSuperadmin: true
-        }) as RequestHandler,
+        }) as any as RequestHandler,
   SubscriptionAnalyticsController.getAnalytics
 );
 
@@ -24,7 +24,7 @@ router.get('/current',
         'analytics:view',    
         { application: 'billing',
             allowSuperadmin: true
-        }) as RequestHandler,
+        }) as any as RequestHandler,
   SubscriptionAnalyticsController.getCurrentAnalytics
 );
 
