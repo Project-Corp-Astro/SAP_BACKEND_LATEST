@@ -1,0 +1,75 @@
+# 📝 Simple Single-Stage Dockerfile for Content Service
+# This approach builds everything in one stage to avoid module resolution issues
+
+FROM node:18-alpine
+
+# Set environment variables
+ENV NODE_ENV=production \
+    NPM_CONFIG_LOGLEVEL=warn \
+    NODE_OPTIONS="--max-old-space-size=512" \
+    PORT=3005
+
+# Install system dependencies
+RUN apk update && apk upgrade && \
+    apk add --no-cache \
+    dumb-init \
+    curl \
+    tzdata \
+    ca-certificates \
+    imagemagick \
+    ffmpeg \
+    python3 \
+    make \
+    g++ && \
+    rm -rf /var/cache/apk/*
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S contentuser -u 1001 -G nodejs
+
+# Set working directory
+WORKDIR /app
+
+# Copy and build packages first
+COPY ../../packages/ ./packages/
+WORKDIR /app/packages
+RUN npm install --legacy-peer-deps && npm run build
+
+# Copy shared utilities
+WORKDIR /app
+COPY ../../shared/ ./shared/
+
+# Copy service files
+COPY services/content-service/package*.json ./
+COPY services/content-service/tsconfig.json ./
+
+# Install all dependencies including local package
+RUN npm install --legacy-peer-deps
+
+# Copy source code and build
+COPY services/content-service/src/ ./src/
+RUN npm run build
+
+# Remove dev dependencies but keep local packages
+RUN npm prune --production
+
+# Create necessary directories
+RUN mkdir -p /app/logs /app/uploads /app/media /app/temp && \
+    chown -R contentuser:nodejs /app && \
+    chmod 755 /app/uploads /app/media
+
+# Switch to non-root user
+USER contentuser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=15s --start-period=90s --retries=3 \
+    CMD curl -f http://localhost:3005/health || exit 1
+
+# Expose port
+EXPOSE 3005
+
+# Signal handling
+ENTRYPOINT ["dumb-init", "--"]
+
+# Start the application
+CMD ["node", "dist/index.js"]
