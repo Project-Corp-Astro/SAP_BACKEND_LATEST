@@ -1,7 +1,7 @@
 import express, { Router, RequestHandler } from 'express';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import * as contentController from '../controllers/content.controller';
-import { requireRemotePermission } from '@corp-astro/permission-client';
+import { requireRemotePermission } from '../middlewares/permission.middleware';
 
 const router: Router = express.Router();
 

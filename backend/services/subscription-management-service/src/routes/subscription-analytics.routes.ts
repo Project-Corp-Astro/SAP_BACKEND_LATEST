@@ -1,7 +1,7 @@
 import { RequestHandler, Router } from 'express';
 import { SubscriptionAnalyticsController } from '../controllers/subscription-analytics.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
-import { requireRemotePermission } from '@corp-astro/permission-client';
+import { requireRemotePermission } from '../middlewares/permission.middleware';
 
 const router = Router();
 

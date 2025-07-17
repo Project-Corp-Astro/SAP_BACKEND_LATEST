@@ -1,7 +1,7 @@
 // media.controller.ts
 
 import { Request, Response, NextFunction } from 'express';
-import { validationResult } from 'express-validator';
+const { validationResult } = require('express-validator');
 import mediaService from '../services/media.service';
 import { ContentStatus } from '../interfaces/content.interfaces';
 import { MediaType } from '../interfaces/media.interfaces';

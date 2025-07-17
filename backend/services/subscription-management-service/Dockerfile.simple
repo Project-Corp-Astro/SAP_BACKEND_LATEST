@@ -1,0 +1,68 @@
+# 🐳 Simple Single-Stage Dockerfile for Subscription Management Service
+# Optimized build without external package dependencies
+
+FROM node:18-alpine
+
+# Set environment variables
+ENV NODE_ENV=production \
+    NPM_CONFIG_LOGLEVEL=warn \
+    NODE_OPTIONS="--max-old-space-size=512" \
+    PORT=3003
+
+# Install system dependencies
+RUN apk update && apk upgrade && \
+    apk add --no-cache \
+    dumb-init \
+    curl \
+    tzdata \
+    ca-certificates \
+    python3 \
+    make \
+    g++ && \
+    rm -rf /var/cache/apk/*
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S subscriptionuser -u 1001 -G nodejs
+
+# Set working directory
+WORKDIR /app
+
+# Copy shared utilities (if needed)
+WORKDIR /app
+COPY ../../shared/ ./shared/ || echo "No shared directory found"
+
+# Copy service files
+COPY services/subscription-management-service/package*.json ./
+COPY services/subscription-management-service/tsconfig.json ./
+
+# Install all dependencies including dev dependencies for building
+RUN npm install --legacy-peer-deps --include=dev
+
+# Copy source code and build
+COPY services/subscription-management-service/src/ ./src/
+RUN npm run build
+
+# Remove dev dependencies but keep production ones
+RUN npm prune --production
+
+# Create necessary directories
+RUN mkdir -p /app/logs /app/uploads /app/temp && \
+    chown -R subscriptionuser:nodejs /app && \
+    chmod 755 /app/uploads
+
+# Switch to non-root user
+USER subscriptionuser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=15s --start-period=90s --retries=3 \
+    CMD curl -f http://localhost:3003/health || exit 1
+
+# Expose port
+EXPOSE 3003
+
+# Signal handling
+ENTRYPOINT ["dumb-init", "--"]
+
+# Start the application
+CMD ["node", "dist/index.js"]

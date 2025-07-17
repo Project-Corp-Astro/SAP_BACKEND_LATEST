@@ -1,10 +1,10 @@
 import express, { Router, RequestHandler } from 'express';
-import { check } from 'express-validator';
+const { body } = require('express-validator');
 import mediaController from '../controllers/media.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import { MediaType, VideoProvider } from '../interfaces/media.interfaces';
 import { ContentStatus } from '../interfaces/content.interfaces';
-import { requireRemotePermission } from '@corp-astro/permission-client';
+import { requireRemotePermission } from '../middlewares/permission.middleware';
 
 const router: Router = express.Router();
 
@@ -36,11 +36,11 @@ router.get('/search',
 router.post(
   '/',
   [
-    check('title', 'Title is required').notEmpty(),
-    check('description', 'Description is required').notEmpty(),
-    check('type', `Type must be one of: ${Object.values(MediaType).join(', ')}`).isIn(Object.values(MediaType)),
-    check('url', 'URL is required').notEmpty(),
-    check('category', 'Category is required').notEmpty(),
+    body('title', 'Title is required').notEmpty(),
+    body('description', 'Description is required').notEmpty(),
+    body('type', `Type must be one of: ${Object.values(MediaType).join(', ')}`).isIn(Object.values(MediaType)),
+    body('url', 'URL is required').notEmpty(),
+    body('category', 'Category is required').notEmpty(),
   ],
   mediaController.createMedia as RequestHandler
 );
@@ -75,12 +75,12 @@ router.put(
   '/:mediaId',
 
   [
-    check('title').optional().notEmpty().withMessage('Title must not be empty if provided'),
-    check('description').optional().notEmpty().withMessage('Description must not be empty if provided'),
-    check('type').optional().isIn(Object.values(MediaType)).withMessage(`Type must be one of: ${Object.values(MediaType).join(', ')}`),
-    check('url').optional().notEmpty().withMessage('URL must not be empty if provided'),
-    check('category').optional().notEmpty().withMessage('Category must not be empty if provided'),
-    check('videoProvider').optional().isIn(Object.values(VideoProvider)).withMessage(`Video provider must be one of: ${Object.values(VideoProvider).join(', ')}`),
+    body('title').optional().notEmpty().withMessage('Title must not be empty if provided'),
+    body('description').optional().notEmpty().withMessage('Description must not be empty if provided'),
+    body('type').optional().isIn(Object.values(MediaType)).withMessage(`Type must be one of: ${Object.values(MediaType).join(', ')}`),
+    body('url').optional().notEmpty().withMessage('URL must not be empty if provided'),
+    body('category').optional().notEmpty().withMessage('Category must not be empty if provided'),
+    body('videoProvider').optional().isIn(Object.values(VideoProvider)).withMessage(`Video provider must be one of: ${Object.values(VideoProvider).join(', ')}`),
   ],
   mediaController.updateMedia as RequestHandler
 );
@@ -103,7 +103,7 @@ router.delete(
 router.patch(
   '/:mediaId/status',
   [
-    check('status', `Status must be one of: ${Object.values(ContentStatus).join(', ')}`).isIn(Object.values(ContentStatus)),
+    body('status', `Status must be one of: ${Object.values(ContentStatus).join(', ')}`).isIn(Object.values(ContentStatus)),
   ],
   mediaController.updateMediaStatus as RequestHandler
 );

@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: content-service
-        image: gcr.io/sap-project-466005/content-service:latest
+        image: asia-south1-docker.pkg.dev/sap-project-466005/sap-microservices/content-service:v17
         ports:
         - containerPort: 3005
         env:

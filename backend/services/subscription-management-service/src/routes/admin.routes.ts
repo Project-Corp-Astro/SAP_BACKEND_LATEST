@@ -4,7 +4,7 @@ import adminSubscriptionPlanController from '../controllers/admin/subscription-p
 import { AdminPromoCodeController } from '../controllers/admin/promo-code.controller';
 import promoCodeAnalyticsController from '../controllers/admin/promo-code-analytics.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
-import { requireRemotePermission } from '@corp-astro/permission-client';
+import { requireRemotePermission } from '../middlewares/permission.middleware';
 const router = express.Router();
 const adminSubscriptionController = new AdminSubscriptionController();
 const adminPromoCodeController = new AdminPromoCodeController();

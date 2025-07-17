@@ -3,7 +3,7 @@
 import { Router, RequestHandler } from 'express';
 import videoController from '../controllers/video.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
-import { requireRemotePermission } from '@corp-astro/permission-client';
+import { requireRemotePermission } from '../middlewares/permission.middleware';
 
 const router = Router();
 

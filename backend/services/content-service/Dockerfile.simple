@@ -30,10 +30,10 @@ RUN addgroup -g 1001 -S nodejs && \
 # Set working directory
 WORKDIR /app
 
-# Copy and build packages first
-COPY ../../packages/ ./packages/
-WORKDIR /app/packages
-RUN npm install --legacy-peer-deps --include=dev && npm run build
+# Copy and build packages first (REMOVED - using local middleware instead)
+# COPY ../../packages/ ./packages/
+# WORKDIR /app/packages  
+# RUN npm install --legacy-peer-deps --include=dev && npm run build
 
 # Copy shared utilities
 WORKDIR /app

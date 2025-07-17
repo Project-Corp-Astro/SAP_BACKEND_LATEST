@@ -1,0 +1,112 @@
+# 🐳 Multi-Stage Production Dockerfile for Content Service
+# Optimized for workspace monorepo with proper dependency resolution
+
+# ===================================================================
+# Stage 1: Dependencies and Shared Package Building
+# ===================================================================
+FROM node:18-alpine AS dependencies
+
+# Install system dependencies required for building
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    git
+
+# Set working directory
+WORKDIR /app
+
+# Copy workspace root files
+COPY package*.json ./
+COPY tsconfig.json ./
+
+# Copy workspace packages
+COPY packages/ ./packages/
+COPY shared/ ./shared/
+
+# Install workspace dependencies (this will link packages properly)
+RUN npm ci --include=dev
+
+# Build shared packages
+WORKDIR /app/packages/permission-client
+RUN npm run build
+
+WORKDIR /app/shared
+RUN npm run build 2>/dev/null || echo "No shared build script, skipping"
+
+# ===================================================================
+# Stage 2: Service Building
+# ===================================================================
+FROM dependencies AS builder
+
+WORKDIR /app
+
+# Copy content service files
+COPY backend/services/content-service/package*.json ./content-service/
+COPY backend/services/content-service/tsconfig*.json ./content-service/
+
+# Install content service dependencies
+WORKDIR /app/content-service
+RUN npm ci --include=dev
+
+# Copy content service source
+COPY backend/services/content-service/src/ ./src/
+
+# Build the application
+RUN npm run build
+
+# ===================================================================
+# Stage 3: Production Runtime
+# ===================================================================
+FROM node:18-alpine AS production
+
+# Install runtime dependencies
+RUN apk add --no-cache \
+    dumb-init \
+    curl \
+    tzdata \
+    ca-certificates \
+    imagemagick \
+    ffmpeg
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S contentuser -u 1001 -G nodejs
+
+# Set working directory
+WORKDIR /app
+
+# Copy built application from builder stage
+COPY --from=builder --chown=contentuser:nodejs /app/content-service/dist ./dist
+COPY --from=builder --chown=contentuser:nodejs /app/content-service/package*.json ./
+
+# Copy built packages
+COPY --from=builder --chown=contentuser:nodejs /app/packages/permission-client/dist ./node_modules/@sap/permission-client/dist
+COPY --from=builder --chown=contentuser:nodejs /app/packages/permission-client/package.json ./node_modules/@sap/permission-client/
+
+# Install only production dependencies
+RUN npm ci --only=production && npm cache clean --force
+
+# Create necessary directories
+RUN mkdir -p /app/logs /app/uploads /app/media /app/temp && \
+    chown -R contentuser:nodejs /app && \
+    chmod 755 /app/uploads /app/media
+
+# Switch to non-root user
+USER contentuser
+
+# Set environment variables
+ENV NODE_ENV=production \
+    PORT=3005 \
+    NODE_OPTIONS="--max-old-space-size=512"
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=15s --start-period=90s --retries=3 \
+    CMD curl -f http://localhost:3005/health || exit 1
+
+# Expose port
+EXPOSE 3005
+
+# Start the application with proper signal handling
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "dist/index.js"]
