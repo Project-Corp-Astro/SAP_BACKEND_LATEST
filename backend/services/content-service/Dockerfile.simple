@@ -43,8 +43,8 @@ COPY ../../shared/ ./shared/
 COPY services/content-service/package*.json ./
 COPY services/content-service/tsconfig.json ./
 
-# Install all dependencies including local package
-RUN npm install --legacy-peer-deps
+# Install all dependencies including local package and dev dependencies for building
+RUN npm install --legacy-peer-deps --include=dev
 
 # Copy source code and build
 COPY services/content-service/src/ ./src/
