@@ -33,7 +33,7 @@ WORKDIR /app
 # Copy and build packages first
 COPY ../../packages/ ./packages/
 WORKDIR /app/packages
-RUN npm install --legacy-peer-deps && npm run build
+RUN npm install --legacy-peer-deps --include=dev && npm run build
 
 # Copy shared utilities
 WORKDIR /app
