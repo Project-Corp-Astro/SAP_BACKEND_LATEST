@@ -92,17 +92,17 @@ RUN addgroup -g 1001 -S nodejs && \
 # Set working directory
 WORKDIR /app
 
-# Copy built packages and shared first
+# Copy built packages and dependencies from builder stage
 COPY --from=builder --chown=contentuser:nodejs /app/packages ./packages
 COPY --from=builder --chown=contentuser:nodejs /app/shared ./shared
+COPY --from=builder --chown=contentuser:nodejs /app/node_modules ./node_modules
 
 # Copy package files and built application
 COPY --from=builder --chown=contentuser:nodejs /app/package*.json ./
 COPY --from=builder --chown=contentuser:nodejs /app/dist ./dist
 
-# Install production dependencies and link local package
-RUN npm install --only=production --legacy-peer-deps && \
-    npm cache clean --force
+# Clean up dev dependencies but keep the built local package
+RUN npm prune --production
 
 # Create necessary directories
 RUN mkdir -p /app/logs /app/uploads /app/media /app/temp && \
