@@ -1,6 +1,13 @@
 import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
 import { jest, beforeAll, afterAll, afterEach } from '@jest/globals';
+
+// Make mongodb-memory-server optional for production builds
+let MongoMemoryServer: any;
+try {
+  MongoMemoryServer = require('mongodb-memory-server').MongoMemoryServer;
+} catch (error) {
+  console.log('mongodb-memory-server not available, skipping test setup');
+}
 
 // Define types for global mocks
 type MockRequest = {
@@ -33,6 +40,11 @@ jest.setTimeout(30000);
 // Setup before all tests
 beforeAll(async () => {
   try {
+    if (!MongoMemoryServer) {
+      console.log('Test DB setup skipped - mongodb-memory-server not available');
+      return;
+    }
+    
     mongoServer = await MongoMemoryServer.create();
     const mongoUri = mongoServer.getUri();
     

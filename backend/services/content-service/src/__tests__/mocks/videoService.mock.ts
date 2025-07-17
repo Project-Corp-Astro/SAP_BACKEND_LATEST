@@ -44,25 +44,25 @@ export const getVideos = jest.fn().mockImplementation(() => Promise.resolve({
   page: 1,
   limit: 10
 } as VideoResponse));
-export const getVideoById = jest.fn().mockImplementation((id: string) => Promise.resolve(mockVideo));
-export const getVideoBySlug = jest.fn().mockImplementation((slug: string) => Promise.resolve(mockVideo));
-export const updateVideo = jest.fn().mockImplementation((id: string, data: any) => Promise.resolve({
+export const getVideoById = jest.fn().mockImplementation((...args: any[]) => Promise.resolve(mockVideo));
+export const getVideoBySlug = jest.fn().mockImplementation((...args: any[]) => Promise.resolve(mockVideo));
+export const updateVideo = jest.fn().mockImplementation((...args: any[]) => Promise.resolve({
   ...mockVideo,
   title: 'Updated Video',
   description: 'Updated Description'
 } as VideoDocument));
-export const deleteVideo = jest.fn().mockImplementation((id: string) => Promise.resolve(mockVideo));
-export const incrementViewCount = jest.fn().mockImplementation((id: string) => Promise.resolve({
+export const deleteVideo = jest.fn().mockImplementation((...args: any[]) => Promise.resolve(mockVideo));
+export const incrementViewCount = jest.fn().mockImplementation((...args: any[]) => Promise.resolve({
   ...mockVideo,
   viewCount: 1
 } as VideoDocument));
-export const updateEngagementMetrics = jest.fn().mockImplementation((id: string, metrics: any) => Promise.resolve({
+export const updateEngagementMetrics = jest.fn().mockImplementation((...args: any[]) => Promise.resolve({
   ...mockVideo,
   likeCount: 1,
   commentCount: 1
 } as VideoDocument));
-export const getFeaturedVideos = jest.fn().mockImplementation((limit: number) => Promise.resolve([mockVideo]));
-export const getRelatedVideos = jest.fn().mockImplementation((videoId: string, limit: number) => Promise.resolve([mockVideo]));
+export const getFeaturedVideos = jest.fn().mockImplementation((...args: any[]) => Promise.resolve([mockVideo]));
+export const getRelatedVideos = jest.fn().mockImplementation((...args: any[]) => Promise.resolve([mockVideo]));
 
 // Export the mock service
 const videoService = {

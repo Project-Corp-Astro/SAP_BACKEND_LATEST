@@ -133,6 +133,11 @@ class ContentController {
       const { contentId } = req.params;
       const { status } = req.body;
       const { user } = req;
+      
+      if (!user) {
+        return res.status(401).json({ success: false, message: 'User not authenticated' });
+      }
+      
       const updated = await contentService.updateContentStatus(contentId, status, user);
       return res.status(200).json({ success: true, message: 'Status updated', data: updated });
     } catch (error) {

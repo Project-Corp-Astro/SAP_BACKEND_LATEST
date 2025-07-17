@@ -1,14 +1,16 @@
 # 📝 Multi-Stage Dockerfile for Content Service
 # Optimized for content management and Elasticsearch integration
-# Build size target: < 190MB | Startup time: < 15 seconds
 
 # ================================
 # Stage 1: Base Dependencies
 # ================================
 FROM node:18-alpine AS base
 
+# Build argument for environment
+ARG BUILD_ENV=production
+
 # Content service environment
-ENV NODE_ENV=production \
+ENV NODE_ENV=$BUILD_ENV \
     NPM_CONFIG_LOGLEVEL=warn \
     NPM_CONFIG_COLOR=false \
     NODE_OPTIONS="--max-old-space-size=512" \
@@ -32,64 +34,48 @@ RUN addgroup -g 1001 -S nodejs && \
 # Set working directory
 WORKDIR /app
 
-# Copy the packages directory 
+# ================================
+# Stage 2: Build Dependencies
+# ================================
+FROM base AS builder
+
+# Install build tools
+RUN apk add --no-cache python3 make g++
+
+# Copy and build the packages first
 COPY ../../packages/ ./packages/
-
-# Build the packages
 WORKDIR /app/packages
-RUN npm install --legacy-peer-deps --include=dev && npm run build
+RUN npm install --legacy-peer-deps && npm run build
 
-# Copy the shared directory for shared utilities
+# Copy shared utilities
 WORKDIR /app
 COPY ../../shared/ ./shared/
 
-# Return to app directory and copy content service files
-WORKDIR /app
-COPY services/content-service/package.json ./
+# Copy service files
+COPY services/content-service/package*.json ./
 COPY services/content-service/tsconfig.json ./
 
-# Install the local package using file: protocol (this should work with the built package)
+# Install all dependencies (including dev for building)
+ENV NODE_ENV=development
 RUN npm install --legacy-peer-deps
 
-# ================================
-# Stage 2: Development Dependencies  
-# ================================
-FROM base AS development
-
-# Install all dependencies including devDependencies and local packages
-RUN npm install --legacy-peer-deps --include=dev --no-audit --no-fund
-
-# Copy source code and compile TypeScript
+# Copy source code
 COPY services/content-service/src/ ./src/
 
-# Compile TypeScript to JavaScript
+# Build the application
 RUN npm run build
 
 # ================================
-# Stage 3: Production Dependencies
-# ================================
-FROM base AS production-deps
-
-# Temporarily set NODE_ENV to development to install all deps including devDependencies
-ENV NODE_ENV=development
-
-# Install ALL dependencies including dev dependencies and local packages
-RUN npm install --legacy-peer-deps --include=dev --no-audit --no-fund && \
-    npm cache clean --force
-
-# ================================
-# Stage 4: Production Runtime
+# Stage 3: Production Runtime
 # ================================
 FROM node:18-alpine AS production
 
-# Production environment for content service
+# Production environment
 ENV NODE_ENV=production \
     NODE_OPTIONS="--max-old-space-size=512" \
-    PORT=3005 \
-    TINI_SUBREAPER=true \
-    MAX_FILE_SIZE=50MB
+    PORT=3005
 
-# Install runtime dependencies for content processing
+# Install runtime dependencies
 RUN apk add --no-cache \
     dumb-init \
     curl \
@@ -106,32 +92,27 @@ RUN addgroup -g 1001 -S nodejs && \
 # Set working directory
 WORKDIR /app
 
-# Copy production dependencies
-COPY --from=production-deps --chown=contentuser:nodejs /app/node_modules ./node_modules
+# Copy package files
+COPY --from=builder --chown=contentuser:nodejs /app/package*.json ./
 
-# Copy the built packages  
-COPY --from=development --chown=contentuser:nodejs /app/packages ./packages
+# Install only production dependencies
+RUN npm ci --only=production --legacy-peer-deps && \
+    npm cache clean --force
 
-# Copy the shared directory for shared utilities
-COPY --from=development --chown=contentuser:nodejs /app/shared ./shared
+# Copy built application and dependencies
+COPY --from=builder --chown=contentuser:nodejs /app/dist ./dist
+COPY --from=builder --chown=contentuser:nodejs /app/packages ./packages
+COPY --from=builder --chown=contentuser:nodejs /app/shared ./shared
 
-# Copy compiled application files
-COPY --from=development --chown=contentuser:nodejs /app/dist ./dist
-COPY --from=development --chown=contentuser:nodejs /app/package.json ./
-
-# Create content directories with proper permissions
+# Create necessary directories
 RUN mkdir -p /app/logs /app/uploads /app/media /app/temp && \
-    chown -R contentuser:nodejs /app/logs /app/uploads /app/media /app/temp && \
-    chmod 755 /app/uploads /app/media && \
-    chmod 700 /app/temp
-
-# Security cleanup
-RUN rm -rf /tmp/* /var/tmp/* /root/.npm /root/.cache
+    chown -R contentuser:nodejs /app && \
+    chmod 755 /app/uploads /app/media
 
 # Switch to non-root user
 USER contentuser
 
-# Health check for content service
+# Health check
 HEALTHCHECK --interval=30s --timeout=15s --start-period=90s --retries=3 \
     CMD curl -f http://localhost:3005/health || exit 1
 
@@ -141,8 +122,8 @@ EXPOSE 3005
 # Signal handling
 ENTRYPOINT ["dumb-init", "--"]
 
-# Start content service with ts-node
-CMD ["npm", "start"]
+# Start the application
+CMD ["node", "dist/index.js"]
 
 # ================================
 # Metadata
@@ -154,5 +135,5 @@ LABEL maintainer="SAP Backend Team" \
       environment="production" \
       security.scan="required" \
       features="CMS,search,media-processing" \
-      dependencies="elasticsearch,mongodb" \
+      dependencies="mongodb" \
       performance.target="startup<15s,memory<512MB"

@@ -30,35 +30,35 @@ export const mockMedia = {
 // Create mock media service functions
 export const createMedia = jest.fn().mockImplementation((data: any) => Promise.resolve(mockMedia));
 
-export const getAllMedia = jest.fn().mockImplementation((filters: any, page: number, limit: number, sortBy: string, sortOrder: string) => Promise.resolve({
+export const getAllMedia = jest.fn().mockImplementation((...args: any[]) => Promise.resolve({
   data: [mockMedia],
   totalCount: 1,
   page: 1,
   limit: 10
 } as MediaResponse));
 
-export const getMediaById = jest.fn().mockImplementation((id: string) => Promise.resolve(mockMedia));
+export const getMediaById = jest.fn().mockImplementation((...args: any[]) => Promise.resolve(mockMedia));
 
-export const getMediaBySlug = jest.fn().mockImplementation((slug: string) => Promise.resolve(mockMedia));
+export const getMediaBySlug = jest.fn().mockImplementation((...args: any[]) => Promise.resolve(mockMedia));
 
-export const updateMedia = jest.fn().mockImplementation((id: string, data: any) => Promise.resolve({
+export const updateMedia = jest.fn().mockImplementation((...args: any[]) => Promise.resolve({
   ...mockMedia,
   title: 'Updated Media',
   description: 'Updated Description'
 } as MediaDocument));
 
-export const deleteMedia = jest.fn().mockImplementation((id: string) => Promise.resolve(mockMedia));
+export const deleteMedia = jest.fn().mockImplementation((...args: any[]) => Promise.resolve(mockMedia));
 
-export const updateMediaStatus = jest.fn().mockImplementation((id: string, status: ContentStatus) => Promise.resolve({
+export const updateMediaStatus = jest.fn().mockImplementation((...args: any[]) => Promise.resolve({
   ...mockMedia,
   status: ContentStatus.PUBLISHED
 } as MediaDocument));
 
-export const incrementViewCount = jest.fn().mockImplementation((id: string) => Promise.resolve(1));
+export const incrementViewCount = jest.fn().mockImplementation((...args: any[]) => Promise.resolve(1));
 
-export const incrementDownloadCount = jest.fn().mockImplementation((id: string) => Promise.resolve(1));
+export const incrementDownloadCount = jest.fn().mockImplementation((...args: any[]) => Promise.resolve(1));
 
-export const getMediaByType = jest.fn().mockImplementation((type: MediaType, limit: number) => Promise.resolve([mockMedia]));
+export const getMediaByType = jest.fn().mockImplementation((...args: any[]) => Promise.resolve([mockMedia]));
 
 // Export the mock service
 const mediaService = {

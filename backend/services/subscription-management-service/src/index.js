@@ -32,6 +32,7 @@ const supabase_1 = require("./utils/supabase");
 const admin_routes_1 = __importDefault(require("./routes/admin.routes"));
 const app_routes_1 = __importDefault(require("./routes/app.routes"));
 const monitoring_routes_1 = __importDefault(require("./routes/monitoring.routes"));
+const subscription_analytics_routes_1 = __importDefault(require("./routes/subscription-analytics.routes"));
 const error_handler_1 = require("./middleware/error-handler");
 // We import AppDataSource from our data-source file to avoid duplicate declarations
 // Initialize Express app
@@ -176,6 +177,7 @@ function initializeService() {
 app.use('/api/subscription/admin', admin_routes_1.default);
 app.use('/api/subscription/app', app_routes_1.default);
 app.use('/api/subscription/monitoring', monitoring_routes_1.default);
+app.use('/api/subscription/analytics', subscription_analytics_routes_1.default);
 // Health check route handler
 const handleHealthCheck = (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -266,14 +268,18 @@ app.get('/swagger.json', (req, res) => {
     res.setHeader('Content-Type', 'application/json');
     res.send(swaggerSpec);
 });
-// Error handling middleware
-app.use(error_handler_1.errorHandler);
-// Not found handler - should be the last non-error middleware
+// Regular route handlers should be registered before these
+// 404 handler - must be after all other route handlers but before error handlers
 app.use((req, res) => {
     res.status(404).json({
         success: false,
         message: `Route ${req.originalUrl} not found`,
     });
+});
+// Error handling middleware - must have 4 parameters to be recognized as an error handler
+app.use((err, req, res, next) => {
+    // Delegate to the error handler
+    (0, error_handler_1.errorHandler)(err, req, res, next);
 });
 // Start server
 let server;

@@ -170,7 +170,7 @@ const gracefulShutdown = async (signal: string) => {
   try {
     if (activeServer) {
       await new Promise<void>((resolve) => {
-        activeServer.close(() => {
+        activeServer!.close(() => {
           logger.info('HTTP server closed');
           resolve();
         });

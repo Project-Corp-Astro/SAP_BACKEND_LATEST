@@ -219,28 +219,28 @@ const redisUtils: RedisUtils = {
     const closePromises: Promise<string>[] = [];
     
     closePromises.push(
-      contentCache.getClient().quit().catch(error => {
+      contentCache.getClient().quit().catch((error: any) => {
         errors.push({ client: 'content', error: (error as Error).message });
         return '';
       })
     );
     
     closePromises.push(
-      mediaCache.getClient().quit().catch(error => {
+      mediaCache.getClient().quit().catch((error: any) => {
         errors.push({ client: 'media', error: (error as Error).message });
         return '';
       })
     );
     
     closePromises.push(
-      videoCache.getClient().quit().catch(error => {
+      videoCache.getClient().quit().catch((error: any) => {
         errors.push({ client: 'video', error: (error as Error).message });
         return '';
       })
     );
     
     closePromises.push(
-      categoryCache.getClient().quit().catch(error => {
+      categoryCache.getClient().quit().catch((error: any) => {
         errors.push({ client: 'category', error: (error as Error).message });
         return '';
       })
