@@ -32,10 +32,15 @@ RUN addgroup -g 1001 -S nodejs && \
 # Set working directory
 WORKDIR /app
 
-# Copy the packages directory (already built)
+# Copy the packages directory 
 COPY ../../packages/ ./packages/
 
+# Build the packages
+WORKDIR /app/packages
+RUN npm install --legacy-peer-deps && npm run build
+
 # Copy the shared directory for shared utilities
+WORKDIR /app
 COPY ../../shared/ ./shared/
 
 # Return to app directory and copy content service files
