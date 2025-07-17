@@ -51,6 +51,18 @@ try {
         async set() { return true; }
         async del() { return true; }
         async exists() { return false; }
+      },
+      SERVICE_DB_MAPPING: {
+        'api-gateway': 0,
+        'auth': 1,
+        'user': 2,
+        'subscription': 3,
+        'content': 4,
+        'notification': 5,
+        'payment': 6,
+        'monitoring': 7,
+        'analytics': 8,
+        'default': 0
       }
     };
   }
@@ -70,6 +82,18 @@ try {
       async set() { return true; }
       async del() { return true; }
       async exists() { return false; }
+    },
+    SERVICE_DB_MAPPING: {
+      'api-gateway': 0,
+      'auth': 1,
+      'user': 2,
+      'subscription': 3,
+      'content': 4,
+      'notification': 5,
+      'payment': 6,
+      'monitoring': 7,
+      'analytics': 8,
+      'default': 0
     }
   };
 }
