@@ -49,7 +49,7 @@ try {
     throw new Error('createServiceRedisClient returned null');
   }
 } catch (error) {
-  logger.warn('Failed to create Redis client via redisManager, creating directly:', { error: error instanceof Error ? error.message : String(error) });
+  logger.error('Failed to create Redis client via redisManager, creating directly:', { error: error instanceof Error ? error.message : String(error) });
   // Create Redis client directly using ioredis
   const redisConfig = getRedisConfig();
   redisClient = new Redis(redisConfig);
@@ -58,7 +58,7 @@ try {
 // Connection event handlers
 redisClient.on('error', (error) => logger.error('Redis client error:', { error: error.message }));
 redisClient.on('connect', () => logger.info('Redis client connected successfully'));
-redisClient.on('end', () => logger.warn('Redis client disconnected'));
+redisClient.on('end', () => logger.error('Redis client disconnected'));
 redisClient.on('reconnecting', () => logger.info('Redis client reconnecting...'));
 
 // Log Redis database information
@@ -310,7 +310,7 @@ const redisUtils: RedisUtils = {
       return value;
     } catch (error: unknown) {
       this.stats.planCache.misses++;
-      logger.warn(`Error getting cached plan ${planId}:`, { error: error instanceof Error ? error.message : String(error) });
+      logger.error(`Error getting cached plan ${planId}:`, { error: error instanceof Error ? error.message : String(error) });
       return null;
     }
   },
@@ -331,7 +331,7 @@ const redisUtils: RedisUtils = {
       return value || [];
     } catch (error: unknown) {
       this.stats.userSubsCache.misses++;
-      logger.warn(`Error getting cached subscriptions for user ${userId}:`, { error: error instanceof Error ? error.message : String(error) });
+      logger.error(`Error getting cached subscriptions for user ${userId}:`, { error: error instanceof Error ? error.message : String(error) });
       return [];
     }
   },
@@ -352,7 +352,7 @@ const redisUtils: RedisUtils = {
       return value;
     } catch (error: unknown) {
       this.stats.promoCache.misses++;
-      logger.warn(`Error getting cached promo ${promoId}:`, { error: error instanceof Error ? error.message : String(error) });
+      logger.error(`Error getting cached promo ${promoId}:`, { error: error instanceof Error ? error.message : String(error) });
       return null;
     }
   },
@@ -364,7 +364,7 @@ const redisUtils: RedisUtils = {
       if (keys.length === 0) return 0;
       return await userSubsCache.getClient().del(...keys);
     } catch (error: unknown) {
-      logger.warn(`Failed to invalidate cache for user ${userId}:`, { error: error instanceof Error ? error.message : String(error) });
+      logger.error(`Failed to invalidate cache for user ${userId}:`, { error: error instanceof Error ? error.message : String(error) });
       return 0;
     }
   }
