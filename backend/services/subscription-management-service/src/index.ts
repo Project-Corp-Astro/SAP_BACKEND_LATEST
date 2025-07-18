@@ -315,18 +315,18 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 let server: http.Server;
 const startServer = async () => {
   try {
-    const availablePort = await detectPort(PREFERRED_PORT);
+    // Use the configured port strictly - no port detection fallback
+    // This ensures the service always runs on the expected port for API Gateway routing
+    const targetPort = PREFERRED_PORT;
     
-    if (availablePort !== PREFERRED_PORT) {
-      logger.warn(`Preferred port ${PREFERRED_PORT} is in use, using available port ${availablePort}`);
-    }
+    logger.info(`Starting ${config.serviceName} on configured port ${targetPort}`);
     
     // Initialize services before starting the server
     await initializeService();
     
-    server = app.listen(availablePort, () => {
-      logger.info(`${config.serviceName} running on port ${availablePort}`);
-      logger.info(`Health check available at http://localhost:${availablePort}/health`);
+    server = app.listen(targetPort, () => {
+      logger.info(`${config.serviceName} running on port ${targetPort}`);
+      logger.info(`Health check available at http://localhost:${targetPort}/health`);
     });
     
   } catch (error: any) {

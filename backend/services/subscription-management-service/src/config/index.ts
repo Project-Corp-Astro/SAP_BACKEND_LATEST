@@ -83,7 +83,7 @@ interface ServiceConfig {
  */
 const config: ServiceConfig = {
   env: process.env.NODE_ENV || 'development',
-  port: parseInt(process.env.SUBSCRIPTION_SERVICE_PORT || '3003', 10),
+  port: parseInt(process.env.SUBSCRIPTION_SERVICE_PORT || process.env.PORT || '3003', 10),
   serviceName: 'subscription-service',
   mongodb: {
     uri: process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/sap-subscriptions',
