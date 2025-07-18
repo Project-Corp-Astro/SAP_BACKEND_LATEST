@@ -34,6 +34,13 @@ spec:
         - name: SERVICE_NAME
           value: "subscription-service"
         
+        # Redis for caching (optional but prevents errors)
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: redis-url
+        
         # Supabase configuration (main database)
         - name: SUPABASE_URL
           valueFrom:
@@ -85,7 +92,7 @@ spec:
           failureThreshold: 3
         readinessProbe:
           httpGet:
-            path: /ready
+            path: /health
             port: 3003
           initialDelaySeconds: 10
           periodSeconds: 5
