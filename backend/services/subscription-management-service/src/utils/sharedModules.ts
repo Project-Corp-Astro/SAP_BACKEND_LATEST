@@ -60,6 +60,15 @@ try {
         async set(key: string, value: any, ttl?: number): Promise<boolean> { return true; }
         async del(key: string): Promise<boolean> { return true; }
         async exists(key: string): Promise<boolean> { return false; }
+        getClient() { 
+          return {
+            quit: async () => 'OK',
+            keys: async () => [],
+            del: async () => 0,
+            ping: async () => 'PONG',
+            expire: async () => 1
+          }; 
+        }
       },
       SERVICE_DB_MAPPING: {
         user: 2,
@@ -86,6 +95,15 @@ try {
       async set(key: string): Promise<boolean> { return true; }
       async del(key: string): Promise<boolean> { return true; }
       async exists(key: string): Promise<boolean> { return false; }
+      getClient() { 
+        return {
+          quit: async () => 'OK',
+          keys: async () => [],
+          del: async () => 0,
+          ping: async () => 'PONG',
+          expire: async () => 1
+        }; 
+      }
     },
     SERVICE_DB_MAPPING: {
       user: 2,

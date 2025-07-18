@@ -94,10 +94,11 @@ COPY --from=production-deps --chown=subuser:nodejs /app/node_modules ./node_modu
 COPY --from=development --chown=subuser:nodejs /app/dist ./dist
 COPY --from=development --chown=subuser:nodejs /app/package.json ./
 
-# Create service directories
+# Create service directories with proper permissions
 RUN mkdir -p /app/logs /app/invoices /app/reports && \
     chown -R subuser:nodejs /app/logs /app/invoices /app/reports && \
-    chmod 755 /app/invoices /app/reports
+    chmod 755 /app/invoices /app/reports && \
+    chmod 777 /app/logs
 
 # Security cleanup
 RUN rm -rf /tmp/* /var/tmp/* /root/.npm /root/.cache

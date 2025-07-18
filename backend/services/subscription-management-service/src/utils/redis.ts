@@ -52,6 +52,13 @@ try {
   logger.error('Failed to create Redis client via redisManager, creating directly:', { error: error instanceof Error ? error.message : String(error) });
   // Create Redis client directly using ioredis
   const redisConfig = getRedisConfig();
+  
+  // Log the configuration for debugging
+  logger.info('Creating Redis client with config:', { 
+    config: redisConfig, 
+    redisUrl: process.env.REDIS_URL ? 'set' : 'not set' 
+  });
+  
   redisClient = new Redis(redisConfig);
 }
 
