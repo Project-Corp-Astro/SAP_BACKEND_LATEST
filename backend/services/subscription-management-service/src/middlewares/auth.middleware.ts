@@ -2,7 +2,25 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import 'dotenv/config';
 import logger from '../utils/logger';
-import { AuthUser } from '../../../../shared/types/auth-user'; // adjust path as needed
+
+// Define AuthUser interface locally to avoid shared dependency issues
+interface AuthUser {
+  id: string;
+  _id?: string;
+  email: string;
+  role: string;
+  permissions?: string[];
+  userId?: string;
+  rolePermissionIds?: string[];
+}
+
+// Define JWT payload interface
+interface CustomJwtPayload {
+  userId: string;
+  email: string;
+  role?: string;
+  rolePermissionIds?: string[];
+}
 
 // Set the service name for logging
 const SERVICE_NAME = 'subscription-management-service';
@@ -61,12 +79,14 @@ export const authMiddleware = (
 
   // Verify token
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    const payload = jwt.verify(token, JWT_SECRET) as CustomJwtPayload;
 
     // Attach user info to request
     req.user = {
+      id: payload.userId,
       _id: payload.userId,
       email: payload.email,
+      role: payload.role || 'user',
       rolePermissionIds: payload.rolePermissionIds || [],
     };
 

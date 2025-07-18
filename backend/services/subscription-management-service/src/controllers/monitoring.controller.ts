@@ -7,11 +7,10 @@
 
 import { Request, Response } from 'express';
 import { redisUtils } from '../utils/redis';
-import { getRedisHealthMetrics } from '../../../../shared/utils/redis-manager';
+import { redisManager, logger } from '../utils/sharedModules';
 import performanceMonitor from '../utils/performance';
 import mongoose from 'mongoose';
 import os from 'os';
-import logger from '../../../../shared/utils/logger';
 
 class MonitoringController {
   /**
@@ -92,7 +91,7 @@ class MonitoringController {
     // Check Redis health
     const redisConnected = await redisUtils.pingRedis();
     const redisStatus = redisConnected ? 'healthy' : 'critical';
-    const redisMetrics = await getRedisHealthMetrics('content') || {
+    const redisMetrics = await redisManager.getRedisHealthMetrics('content') || {
       uptime: '0',
       connectedClients: '0',
       usedMemory: '0',

@@ -8,7 +8,7 @@ import http from 'http';
 import detectPort from 'detect-port';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
-import { createServiceSwaggerConfig } from '../../../shared/utils/swagger';
+import { config as sharedConfig } from './utils/sharedModules';
 // Import database configuration
 import { AppDataSource, initializeDatabase } from './db/data-source';
 import config from './config';
@@ -261,18 +261,29 @@ app.get('/api/subscription/health', handleHealthCheck);
 
 // Setup Swagger documentation
 // Use absolute paths for file patterns to ensure they're found correctly
-const swaggerOptions = createServiceSwaggerConfig(
-  'Subscription Management Service',
-  'API for managing subscription plans, user subscriptions, and promo codes',
-  config.port,
-  [
+const swaggerOptions = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'Subscription Management Service',
+      version: '1.0.0',
+      description: 'API for managing subscription plans, user subscriptions, and promo codes',
+    },
+    servers: [
+      {
+        url: `http://localhost:${config.port}`,
+        description: 'Development server',
+      },
+    ],
+  },
+  apis: [
     // Make sure paths are relative to current directory
     `${__dirname}/controllers/**/*.ts`,
     `${__dirname}/routes/**/*.ts`,
     `${__dirname}/entities/**/*.ts`,
     `${__dirname}/models/**/*.ts`
-  ]
-);
+  ],
+};
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 // Use type assertion to fix TypeScript compatibility issue

@@ -1,7 +1,17 @@
 import axios from 'axios';
 import { Request, Response, NextFunction } from 'express';
-import { AuthUser } from '../../../../shared/types/auth-user';
 import logger from '../utils/logger';
+
+// Define AuthUser interface locally to avoid shared dependency issues
+interface AuthUser {
+  id: string;
+  _id?: string;
+  email: string;
+  role: string;
+  permissions?: string[];
+  userId?: string;
+  rolePermissionIds?: string[];
+}
 
 const USER_SERVICE_PERMISSION_API_URL = process.env.USER_SERVICE_PERMISSION_API_URL || 'http://localhost:3002';
 const SERVICE_NAME = 'subscription-management-service';
