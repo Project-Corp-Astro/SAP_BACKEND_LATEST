@@ -1,0 +1,66 @@
+# 🔒 Simple HTTPS Setup for Existing API Gateway
+# This approach adds HTTPS directly to your working LoadBalancer
+
+# Step 1: Install cert-manager (simpler, standalone)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cert-manager
+---
+# Simple ClusterIssuer for Let's Encrypt certificates
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: admin@sapbackend.com  # Replace with your email
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    solvers:
+    - http01:
+        ingress:
+          class: nginx
+---
+# Certificate for your existing LoadBalancer IP
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: api-gateway-cert
+  namespace: sap-microservices
+spec:
+  secretName: api-gateway-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+  - 34-93-4-25.nip.io  # Using your current IP with nip.io
+  - api.sapbackend.local
+---
+# Update your existing API Gateway service to support HTTPS
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway-https
+  namespace: sap-microservices
+  labels:
+    app: api-gateway
+    component: gateway-https
+  annotations:
+    service.beta.kubernetes.io/gcp-load-balancer-type: "External"
+    # Enable SSL
+    cloud.google.com/neg: '{"ingress": true}'
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 443
+    targetPort: 5001
+    protocol: TCP
+    name: https
+  - port: 80
+    targetPort: 5001
+    protocol: TCP
+    name: http
+  selector:
+    app: api-gateway
