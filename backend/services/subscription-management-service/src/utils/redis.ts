@@ -21,13 +21,27 @@ const planCache = new RedisCache(SERVICE_NAME, { keyPrefix: `${SERVICE_NAME}:pla
 const userSubsCache = new RedisCache(SERVICE_NAME, { keyPrefix: `${SERVICE_NAME}:user-subscriptions:` });
 const promoCache = new RedisCache(SERVICE_NAME, { keyPrefix: `${SERVICE_NAME}:promos:` });
 
-// Create standard Redis client instance
-const redisClient: IORedis = createServiceRedisClient(SERVICE_NAME, {
-  host: config.get ? config.get('redis.host', 'localhost') : config.redis.host,
-  port: config.get ? parseInt(config.get('redis.port', '6379')) : config.redis.port,
-  password: (config.get ? config.get('redis.password', '') : config.redis.password) || undefined,
-  db: SERVICE_DB_MAPPING[SERVICE_NAME] || DB_NUMBER
-});
+// Create standard Redis client instance with proper fallbacks
+const getRedisConfig = () => {
+  // If REDIS_URL is available, use it directly
+  if (process.env.REDIS_URL) {
+    return { url: process.env.REDIS_URL, db: SERVICE_DB_MAPPING[SERVICE_NAME] || DB_NUMBER };
+  }
+  
+  // Otherwise use config with proper fallbacks
+  const host = config.get ? config.get('redis.host', 'localhost') : (config.redis?.host || 'localhost');
+  const port = config.get ? parseInt(config.get('redis.port', '6379')) : (config.redis?.port || 6379);
+  const password = config.get ? config.get('redis.password', '') : (config.redis?.password || '');
+  
+  return {
+    host,
+    port,
+    password: password || undefined,
+    db: SERVICE_DB_MAPPING[SERVICE_NAME] || DB_NUMBER
+  };
+};
+
+const redisClient: IORedis = createServiceRedisClient(SERVICE_NAME, getRedisConfig());
 
 // Connection event handlers
 redisClient.on('error', (error) => logger.error('Redis client error:', { error: error.message }));
