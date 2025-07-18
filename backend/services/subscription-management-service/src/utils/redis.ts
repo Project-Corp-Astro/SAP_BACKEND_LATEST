@@ -41,7 +41,19 @@ const getRedisConfig = () => {
   };
 };
 
-const redisClient: IORedis = createServiceRedisClient(SERVICE_NAME, getRedisConfig());
+// Try to create Redis client using redisManager, fallback to direct creation
+let redisClient: IORedis;
+try {
+  redisClient = createServiceRedisClient(SERVICE_NAME, getRedisConfig());
+  if (!redisClient) {
+    throw new Error('createServiceRedisClient returned null');
+  }
+} catch (error) {
+  logger.warn('Failed to create Redis client via redisManager, creating directly:', { error: error instanceof Error ? error.message : String(error) });
+  // Create Redis client directly using ioredis
+  const redisConfig = getRedisConfig();
+  redisClient = new Redis(redisConfig);
+}
 
 // Connection event handlers
 redisClient.on('error', (error) => logger.error('Redis client error:', { error: error.message }));
