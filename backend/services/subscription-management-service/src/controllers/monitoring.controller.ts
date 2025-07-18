@@ -9,7 +9,7 @@ import { Request, Response } from 'express';
 import { redisUtils } from '../utils/redis';
 import { redisManager, logger } from '../utils/sharedModules';
 import performanceMonitor from '../utils/performance';
-import mongoose from 'mongoose';
+import { AppDataSource } from '../db/data-source';
 import os from 'os';
 
 class MonitoringController {
@@ -99,8 +99,29 @@ class MonitoringController {
       hitRate: '0%'
     };
     
-    // Check Database health
-    const dbStatus = mongoose.connection.readyState === 1 ? 'healthy' : 'critical';
+    // Check Database health using TypeORM
+    let dbStatus = 'healthy';
+    let dbInfo = { name: 'supabase', host: 'connected', readyState: 1 };
+    
+    try {
+      // Test database connection with a simple query
+      if (AppDataSource.isInitialized) {
+        await AppDataSource.query('SELECT 1');
+        dbStatus = 'healthy';
+        const options = AppDataSource.options as any;
+        dbInfo = {
+          name: options.database || 'supabase',
+          host: options.host || 'connected',
+          readyState: 1
+        };
+      } else {
+        dbStatus = 'critical';
+        dbInfo = { name: 'not-initialized', host: 'disconnected', readyState: 0 };
+      }
+    } catch (error) {
+      dbStatus = 'critical';
+      dbInfo = { name: 'error', host: 'disconnected', readyState: 0 };
+    }
     
     // Overall status is the worst of the individual statuses
     const status = [
@@ -131,9 +152,9 @@ class MonitoringController {
         },
         database: {
           status: dbStatus,
-          name: mongoose.connection.name || 'undefined',
-          host: mongoose.connection.host || 'undefined',
-          readyState: mongoose.connection.readyState
+          name: dbInfo.name,
+          host: dbInfo.host,
+          readyState: dbInfo.readyState
         }
       },
       system: systemInfo,

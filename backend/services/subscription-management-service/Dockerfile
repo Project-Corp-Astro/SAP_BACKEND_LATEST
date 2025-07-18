@@ -100,6 +100,9 @@ RUN mkdir -p /app/logs /app/invoices /app/reports && \
     chmod 755 /app/invoices /app/reports && \
     chmod 777 /app/logs
 
+# Create volume mount points for persistent storage
+VOLUME ["/app/logs"]
+
 # Security cleanup
 RUN rm -rf /tmp/* /var/tmp/* /root/.npm /root/.cache
 
