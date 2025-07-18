@@ -9,8 +9,8 @@ import { ModuleResolver } from './moduleResolver';
 let logger: any;
 try {
   if (ModuleResolver.isDockerEnvironment()) {
-    // In Docker/production
-    logger = require('../../../../shared/utils/logger');
+    // In Docker/production - use ModuleResolver for correct paths
+    logger = require(ModuleResolver.getSharedPath('utils/logger'));
   } else {
     // In local development, create a simple logger
     logger = {
