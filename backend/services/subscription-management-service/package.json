@@ -24,6 +24,7 @@
     "mongoose": "^8.15.1",
     "supabase": "^2.24.3",
     "typeorm": "^0.3.20",
+    "pg": "^8.11.0",
     "compression": "^1.7.4",
     "detect-port": "^1.5.1",
     "swagger-jsdoc": "^6.2.8",
@@ -48,6 +49,7 @@
     "@types/jsonwebtoken": "^9.0.5",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.6",
+    "@types/pg": "^8.10.0",
     "tsconfig-paths": "^4.2.0"
   }
 }
