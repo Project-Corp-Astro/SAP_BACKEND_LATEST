@@ -25,7 +25,8 @@ const promoCache = new RedisCache(SERVICE_NAME, { keyPrefix: `${SERVICE_NAME}:pr
 const getRedisConfig = () => {
   // If REDIS_URL is available, use it directly
   if (process.env.REDIS_URL) {
-    return { url: process.env.REDIS_URL, db: SERVICE_DB_MAPPING[SERVICE_NAME] || DB_NUMBER };
+    logger.info('Using REDIS_URL for configuration:', { redisUrl: process.env.REDIS_URL });
+    return process.env.REDIS_URL; // Return URL string directly for ioredis
   }
   
   // Otherwise use config with proper fallbacks
@@ -56,10 +57,21 @@ try {
   // Log the configuration for debugging
   logger.info('Creating Redis client with config:', { 
     config: redisConfig, 
-    redisUrl: process.env.REDIS_URL ? 'set' : 'not set' 
+    redisUrl: process.env.REDIS_URL ? 'set' : 'not set',
+    configType: typeof redisConfig
   });
   
-  redisClient = new Redis(redisConfig);
+  // Handle both URL string and object configuration
+  if (typeof redisConfig === 'string') {
+    // URL string - add database selection
+    const url = new URL(redisConfig);
+    redisClient = new Redis(redisConfig, {
+      db: SERVICE_DB_MAPPING[SERVICE_NAME] || DB_NUMBER
+    });
+  } else {
+    // Object configuration
+    redisClient = new Redis(redisConfig);
+  }
 }
 
 // Connection event handlers
