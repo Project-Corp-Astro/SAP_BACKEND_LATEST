@@ -43,8 +43,9 @@ FROM base AS development
 # Install all dependencies
 RUN npm ci --include=dev --no-audit --no-fund
 
-# Copy source code
+# Copy source code and shared modules
 COPY src/ ./src/
+COPY ../../shared/ ./shared/
 
 # Build the application (skip tests since jest.config.js doesn't exist)
 RUN npm run build && \

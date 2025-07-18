@@ -10,7 +10,13 @@ let logger: any;
 try {
   if (ModuleResolver.isDockerEnvironment()) {
     // In Docker/production - use ModuleResolver for correct paths
-    logger = require(ModuleResolver.getSharedPath('utils/logger'));
+    const loggerModule = require(ModuleResolver.getSharedPath('utils/logger'));
+    logger = loggerModule.default || loggerModule;
+    
+    // Ensure logger has all required methods
+    if (!logger || typeof logger.info !== 'function' || typeof logger.error !== 'function') {
+      throw new Error('Invalid logger module');
+    }
   } else {
     // In local development, create a simple logger
     logger = {
@@ -20,15 +26,17 @@ try {
       debug: console.log
     };
   }
-} catch {
-  // Fallback logger
+} catch (error) {
+  // Fallback logger with all required methods
+  console.error('Failed to load logger, using fallback:', error);
   logger = {
-    info: console.log,
-    error: console.error,
-    warn: console.warn,
-    debug: console.log
+    info: (...args: any[]) => console.log(...args),
+    error: (...args: any[]) => console.error(...args),
+    warn: (...args: any[]) => console.warn(...args),
+    debug: (...args: any[]) => console.log(...args)
   };
 }
+
 
 // Redis Manager
 let redisManager: any;
