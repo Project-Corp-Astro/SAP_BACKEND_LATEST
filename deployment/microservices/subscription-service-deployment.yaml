@@ -34,19 +34,7 @@ spec:
         - name: SERVICE_NAME
           value: "subscription-service"
         
-        # Database connections
-        - name: MONGODB_URL
-          valueFrom:
-            secretKeyRef:
-              name: database-secrets
-              key: mongodb-subscription-url
-        - name: REDIS_URL
-          valueFrom:
-            secretKeyRef:
-              name: database-secrets
-              key: redis-url
-        
-        # Supabase configuration (for subscription data)
+        # Supabase configuration (main database)
         - name: SUPABASE_URL
           valueFrom:
             secretKeyRef:
@@ -70,25 +58,8 @@ spec:
               name: auth-secrets
               key: jwt-secret
         
-        # Payment gateway configuration
-        - name: PAYMENT_GATEWAY_KEY
-          valueFrom:
-            secretKeyRef:
-              name: payment-secrets
-              key: gateway-key
-        - name: PAYMENT_WEBHOOK_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: payment-secrets
-              key: webhook-secret
-        
         # Service URLs for inter-service communication
-        - name: AUTH_SERVICE_URL
-          valueFrom:
-            configMapKeyRef:
-              name: microservices-config
-              key: AUTH_SERVICE_URL
-        - name: USER_SERVICE_URL
+        - name: USER_SERVICE_PERMISSION_API_URL
           valueFrom:
             configMapKeyRef:
               name: microservices-config
