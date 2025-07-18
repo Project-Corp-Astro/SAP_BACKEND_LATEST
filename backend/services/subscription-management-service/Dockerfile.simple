@@ -28,7 +28,7 @@ RUN addgroup -g 1001 -S nodejs && \
 # Set working directory
 WORKDIR /app
 
-# Copy shared utilities
+# Copy shared utilities 
 WORKDIR /app
 COPY shared/ ./shared/
 
