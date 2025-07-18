@@ -30,17 +30,17 @@ WORKDIR /app
 
 # Copy shared utilities (if needed)
 WORKDIR /app
-COPY ../../shared/ ./shared/ || echo "No shared directory found"
+COPY shared/ ./shared/
 
 # Copy service files
-COPY services/subscription-management-service/package*.json ./
-COPY services/subscription-management-service/tsconfig.json ./
+COPY backend/services/subscription-management-service/package*.json ./
+COPY backend/services/subscription-management-service/tsconfig.json ./
 
 # Install all dependencies including dev dependencies for building
 RUN npm install --legacy-peer-deps --include=dev
 
 # Copy source code and build
-COPY services/subscription-management-service/src/ ./src/
+COPY backend/services/subscription-management-service/src/ ./src/
 RUN npm run build
 
 # Remove dev dependencies but keep production ones

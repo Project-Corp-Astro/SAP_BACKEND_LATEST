@@ -37,17 +37,17 @@ WORKDIR /app
 
 # Copy shared utilities
 WORKDIR /app
-COPY ../../shared/ ./shared/
+COPY shared/ ./shared/
 
 # Copy service files
-COPY services/content-service/package*.json ./
-COPY services/content-service/tsconfig.json ./
+COPY backend/services/content-service/package*.json ./
+COPY backend/services/content-service/tsconfig.json ./
 
 # Install all dependencies including local package and dev dependencies for building
 RUN npm install --legacy-peer-deps --include=dev
 
 # Copy source code and build
-COPY services/content-service/src/ ./src/
+COPY backend/services/content-service/src/ ./src/
 RUN npm run build
 
 # Remove dev dependencies but keep local packages
