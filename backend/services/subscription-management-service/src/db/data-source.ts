@@ -26,10 +26,11 @@ import logger from '../utils/logger';
 // Load environment variables
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
-// Use Supabase DB configuration from main .env file
-const SUPABASE_DB_HOST = process.env.SUPABASE_DB_HOST || 'db.leaekgpafpvrvykeuvgk.supabase.co';
+// Use Supabase DB configuration from environment variables
+// For direct database connection, use the proper Supabase database URL format
+const SUPABASE_DB_HOST = process.env.SUPABASE_DB_HOST || 'aws-0-ap-south-1.pooler.supabase.com';
 const SUPABASE_DB_PORT = parseInt(process.env.SUPABASE_DB_PORT || '5432', 10);
-const SUPABASE_DB_USER = process.env.SUPABASE_DB_USER || 'postgres';
+const SUPABASE_DB_USER = process.env.SUPABASE_DB_USER || 'postgres.leaekgpafpvrvykeuvgk';
 const SUPABASE_DB_PASSWORD = process.env.SUPABASE_DB_PASSWORD || 'COLLoSSkT4atAoWZ';
 const SUPABASE_DB_NAME = process.env.SUPABASE_DB_NAME || 'postgres';
 
