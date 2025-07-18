@@ -1,0 +1,86 @@
+# 🔒 HTTPS Ingress Configuration for SAP Microservices
+# This configuration provides production-ready HTTPS access to your API Gateway
+
+# Install cert-manager for automatic SSL certificate management
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cert-manager
+---
+# ClusterIssuer for Let's Encrypt certificates
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: admin@sapbackend.com  # Replace with your email
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    solvers:
+    - http01:
+        ingress:
+          class: nginx
+---
+# Ingress configuration for HTTPS access
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sap-backend-https-ingress
+  namespace: sap-microservices
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - api.sapbackend.com  # Replace with your domain
+    secretName: sap-backend-tls
+  rules:
+  - host: api.sapbackend.com  # Replace with your domain
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 80
+---
+# Alternative: Use your current external IP with nip.io for testing
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sap-backend-nip-ingress
+  namespace: sap-microservices
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - 34-93-4-25.nip.io  # Uses your current external IP
+    secretName: sap-backend-nip-tls
+  rules:
+  - host: 34-93-4-25.nip.io  # Uses your current external IP
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 80
