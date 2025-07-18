@@ -28,19 +28,15 @@ RUN addgroup -g 1001 -S nodejs && \
 # Set working directory
 WORKDIR /app
 
-# Copy shared utilities 
-WORKDIR /app
-COPY shared/ ./shared/
-
-# Copy service files
-COPY backend/services/subscription-management-service/package*.json ./
-COPY backend/services/subscription-management-service/tsconfig.json ./
+# Copy service files (from current directory since we're building from service dir)
+COPY package*.json ./
+COPY tsconfig.json ./
 
 # Install all dependencies including dev dependencies for building
 RUN npm install --legacy-peer-deps --include=dev
 
 # Copy source code and build
-COPY backend/services/subscription-management-service/src/ ./src/
+COPY src/ ./src/
 RUN npm run build
 
 # Remove dev dependencies but keep production ones
