@@ -1,0 +1,126 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: sap-microservices
+  labels:
+    app: redis
+    component: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+        component: database
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+          name: redis
+        command:
+        - redis-server
+        - --appendonly
+        - "yes"
+        - --save
+        - "60 1"
+        - --loglevel
+        - "notice"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+        - name: redis-config
+          mountPath: /usr/local/etc/redis/redis.conf
+          subPath: redis.conf
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        livenessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 30
+          periodSeconds: 30
+      volumes:
+      - name: redis-data
+        emptyDir: {}
+      - name: redis-config
+        configMap:
+          name: redis-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+  namespace: sap-microservices
+  labels:
+    app: redis
+    component: database
+spec:
+  selector:
+    app: redis
+  ports:
+  - port: 6379
+    targetPort: 6379
+    protocol: TCP
+    name: redis
+  type: ClusterIP
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+  namespace: sap-microservices
+data:
+  redis.conf: |
+    # Redis configuration for SAP microservices
+    
+    # Basic settings
+    bind 0.0.0.0
+    port 6379
+    timeout 0
+    tcp-keepalive 300
+    
+    # Memory management
+    maxmemory 400mb
+    maxmemory-policy allkeys-lru
+    
+    # Persistence
+    appendonly yes
+    appendfsync everysec
+    save 60 1
+    
+    # Database isolation for services
+    databases 16
+    
+    # Logging
+    loglevel notice
+    
+    # Security (basic)
+    protected-mode no
+    
+    # Performance tuning
+    tcp-backlog 511
+    databases 16
+    stop-writes-on-bgsave-error yes
+    
+    # Slow log
+    slowlog-log-slower-than 10000
+    slowlog-max-len 128
