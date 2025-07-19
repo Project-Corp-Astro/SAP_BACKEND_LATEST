@@ -84,7 +84,14 @@ try {
       async set() { return true; }
       async del() { return true; }
       async exists() { return false; }
-      getClient() { return null; }
+      getClient() { 
+        return {
+          ping: async () => 'PONG',
+          quit: async () => 'OK',
+          keys: async () => [],
+          del: async () => 0
+        };
+      }
       async ping() { return 'PONG'; }
     },
     SERVICE_DB_MAPPING: {
