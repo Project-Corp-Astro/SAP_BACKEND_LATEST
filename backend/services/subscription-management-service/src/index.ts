@@ -271,6 +271,10 @@ const swaggerOptions = {
     },
     servers: [
       {
+        url: `http://subscription-service.sap-microservices.svc.cluster.local:${config.port}`,
+        description: 'Kubernetes cluster internal',
+      },
+      {
         url: `http://localhost:${config.port}`,
         description: 'Development server',
       },

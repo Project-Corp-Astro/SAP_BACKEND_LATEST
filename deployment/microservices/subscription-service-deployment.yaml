@@ -43,6 +43,13 @@ spec:
               name: database-secrets
               key: redis-url
         
+        # Elasticsearch for search functionality (optional)
+        - name: ES_NODE
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: elasticsearch-url
+        
         # Supabase configuration (main database)
         - name: SUPABASE_URL
           valueFrom:
