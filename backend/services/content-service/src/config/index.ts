@@ -48,7 +48,7 @@ const config: ServiceConfig = {
   env: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.CONTENT_SERVICE_PORT || '3005', 10), // Changed to 3005 to match .env configuration
   mongodb: {
-    uri: process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/sap-db',
+    uri: process.env.MONGODB_URL || process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/sap-db',
     options: {
       useNewUrlParser: true,
       useUnifiedTopology: true,
