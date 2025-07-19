@@ -51,6 +51,8 @@ try {
         async set() { return true; }
         async del() { return true; }
         async exists() { return false; }
+        getClient() { return null; }
+        async ping() { return 'PONG'; }
       },
       SERVICE_DB_MAPPING: {
         'api-gateway': 0,
@@ -82,6 +84,8 @@ try {
       async set() { return true; }
       async del() { return true; }
       async exists() { return false; }
+      getClient() { return null; }
+      async ping() { return 'PONG'; }
     },
     SERVICE_DB_MAPPING: {
       'api-gateway': 0,

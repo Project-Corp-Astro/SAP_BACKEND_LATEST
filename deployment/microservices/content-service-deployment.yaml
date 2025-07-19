@@ -25,6 +25,8 @@ spec:
         env:
         - name: PORT
           value: "3005"
+        - name: CONTENT_SERVICE_PORT
+          value: "3005"
         - name: MONGODB_URL
           valueFrom:
             secretKeyRef:
