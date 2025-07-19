@@ -37,7 +37,7 @@ WORKDIR /app
 
 # Copy shared utilities
 WORKDIR /app
-COPY shared/ ./shared/
+COPY backend/shared/ ./shared/
 
 # Copy service files
 COPY backend/services/content-service/package*.json ./
