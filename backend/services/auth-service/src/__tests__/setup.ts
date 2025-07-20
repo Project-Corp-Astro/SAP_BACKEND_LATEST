@@ -1,15 +1,21 @@
 import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
+// import { MongoMemoryServer } from 'mongodb-memory-server';
 
-let mongoServer: MongoMemoryServer;
+// Mock MongoMemoryServer for testing
+interface MongoMemoryServer {
+  create(): Promise<MongoMemoryServer>;
+  getUri(): string;
+  stop(): Promise<void>;
+}
+
+let mongoServer: any; // Use any to avoid compilation issues
 
 // Setup before all tests
 beforeAll(async () => {
-  // Create an in-memory MongoDB server
-  mongoServer = await MongoMemoryServer.create();
-  const mongoUri = mongoServer.getUri();
+  // Use regular MongoDB connection for now
+  const mongoUri = process.env.MONGODB_URL || 'mongodb://localhost:27017/auth-test';
   
-  // Connect to the in-memory database
+  // Connect to the database
   await mongoose.connect(mongoUri);
 });
 
@@ -28,8 +34,10 @@ afterAll(async () => {
   // Disconnect from the database
   await mongoose.disconnect();
   
-  // Stop the in-memory server
-  await mongoServer.stop();
+  // Stop the server if it exists
+  if (mongoServer && mongoServer.stop) {
+    await mongoServer.stop();
+  }
 });
 
 // Global test timeout

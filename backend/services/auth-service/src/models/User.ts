@@ -1,7 +1,13 @@
 import mongoose, { Schema, Model, Document, Types } from 'mongoose';
 import bcrypt from 'bcrypt';
-import { encryptionPlugin, decrypt } from '../../../../shared/utils/encryption';
-import { IUser, IUserPreferences } from '../../../../shared/interfaces/user.interface';
+import { IUser } from '../utils/sharedModules';
+
+// Local MFA enum
+export enum MFAType {
+  TOTP = 'totp',
+  SMS = 'sms',
+  EMAIL = 'email'
+}
 
 // Extend the IUser interface to include Mongoose Document properties
 export interface IUserDocument extends Omit<IUser, '_id'>, Document {
@@ -16,7 +22,7 @@ export interface IUserDocument extends Omit<IUser, '_id'>, Document {
     token: string;
     expires: Date;
   };
-  loginAttempts: any[]; // Using any[] to match the array operations in the code
+  loginAttempts: any[];
   lockUntil?: number;
   accountLocked?: boolean;
   accountLockedUntil?: Date;
@@ -37,21 +43,13 @@ export interface IUserDocument extends Omit<IUser, '_id'>, Document {
   generateMfaBackupCodes(): Promise<string[]>;
 }
 
-
-
-// Import other interfaces from auth.interfaces
-import { 
-  UserRole as AuthUserRole, 
-  UserAddress as AuthUserAddress, 
-  OAuthProfile, 
-  MFAType, 
-  UserPreferences as AuthUserPreferences, 
-  SecurityPreferences,
-  LoginAttempt,
-  MFASettings,
-  EmailVerification,
-  PasswordReset
-} from '../interfaces/auth.interfaces';
+// Local interfaces (simplified versions)
+interface LoginAttempt {
+  timestamp: Date;
+  ipAddress?: string;
+  userAgent?: string;
+  successful: boolean;
+}
 
 // Define the schema
 // Use a type assertion to avoid TypeScript errors with schema properties
@@ -94,7 +92,7 @@ const userSchema = new Schema({
   lastLogin: {
     type: Date
   },
-  // OAuth profiles
+  // OAuth profiles (simplified)
   oauthProfiles: [{
     provider: {
       type: String,
@@ -107,20 +105,7 @@ const userSchema = new Schema({
     },
     username: String,
     email: String,
-    displayName: String,
-    firstName: String,
-    lastName: String,
-    profileUrl: String,
-    photoUrl: String,
-    accessToken: {
-      type: String,
-      encrypt: true
-    },
-    refreshToken: {
-      type: String,
-      encrypt: true
-    },
-    tokenExpiresAt: Date
+    displayName: String
   }],
   // Multi-factor authentication
   mfa: {
@@ -198,17 +183,16 @@ const userSchema = new Schema({
     token: String,
     expiresAt: Date
   },
-  // Personal information (encrypted)
+  // Personal information (simplified)
   phoneNumber: {
-    type: String,
-    encrypt: true
+    type: String
   },
   address: {
-    street: { type: String, encrypt: true },
-    city: { type: String, encrypt: true },
-    state: { type: String, encrypt: true },
-    postalCode: { type: String, encrypt: true },
-    country: { type: String, encrypt: true }
+    street: { type: String },
+    city: { type: String },
+    state: { type: String },
+    postalCode: { type: String },
+    country: { type: String }
   },
   // Profile information
   avatar: {
@@ -383,8 +367,7 @@ userSchema.pre('save', async function(this: IUserDocument, next) {
 });
 
 // Apply encryption plugin to encrypt sensitive fields
-// The plugin is already configured with default options
-userSchema.plugin(encryptionPlugin);
+// userSchema.plugin(encryptionPlugin); // Commented out - not available
 
 // Create and export the User model
 const User = mongoose.model<IUserDocument>('User', userSchema);

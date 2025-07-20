@@ -1,0 +1,73 @@
+# 📝 Simple Single-Stage Dockerfile for Auth Service
+# This approach builds everything in one stage to avoid module resolution issues
+
+FROM node:18-alpine
+
+# Set environment variables
+ENV NODE_ENV=production \
+    NPM_CONFIG_LOGLEVEL=warn \
+    NODE_OPTIONS="--max-old-space-size=512" \
+    PORT=3001
+
+# Install system dependencies
+RUN apk update && apk upgrade && \
+    apk add --no-cache \
+    dumb-init \
+    curl \
+    tzdata \
+    ca-certificates \
+    python3 \
+    make \
+    g++ && \
+    rm -rf /var/cache/apk/*
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S authuser -u 1001 -G nodejs
+
+# Set working directory
+WORKDIR /app
+
+# Copy shared modules first
+COPY backend/shared/ ./shared/
+
+# Copy package files
+COPY backend/services/auth-service/package*.json ./
+COPY backend/services/auth-service/tsconfig.json ./
+
+# Install dependencies
+RUN npm install --legacy-peer-deps --include=dev
+
+# Copy source code
+COPY backend/services/auth-service/src/ ./src/
+
+# Create mock for @sap/logger
+RUN mkdir -p node_modules/@sap && \
+    echo 'module.exports = { info: console.log, error: console.error, warn: console.warn, debug: console.log };' > node_modules/@sap/logger.js
+
+# Build the application
+RUN npm run build
+
+# Remove dev dependencies
+RUN npm prune --production
+
+# Create necessary directories and set permissions
+RUN mkdir -p /app/logs && \
+    chown -R authuser:nodejs /app && \
+    chmod 755 /app/logs
+
+# Switch to non-root user
+USER authuser
+
+# Expose port
+EXPOSE 3001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=15s --start-period=90s --retries=3 \
+    CMD curl -f http://localhost:3001/health || exit 1
+
+# Signal handling
+ENTRYPOINT ["dumb-init", "--"]
+
+# Start the application
+CMD ["node", "dist/index.js"]

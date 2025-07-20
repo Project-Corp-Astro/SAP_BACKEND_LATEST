@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { redisClient, otpCache, redisUtils } from '../utils/redis';
 import User from '../models/User';
-import logger from '../../../../shared/utils/logger';
+import { logger } from '../utils/sharedModules';
 
 const router = Router();
 

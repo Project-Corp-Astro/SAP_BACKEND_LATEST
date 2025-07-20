@@ -1,10 +1,11 @@
-import { IUser } from '../../../../shared/interfaces/user.interface';
-import { IUserDocument } from '../../../../models/mongodb/User.model';
+import { IUser } from './sharedModules';
+// Remove problematic import
+// import { IUserDocument } from '../../../../models/mongodb/User.model';
 
 /**
  * Helper function to cast UserDocument to IUser for TypeScript compatibility
  */
-export function asIUser(user: IUserDocument | any): IUser {
+export function asIUser(user: any): IUser {
   return user as IUser;
 }
 

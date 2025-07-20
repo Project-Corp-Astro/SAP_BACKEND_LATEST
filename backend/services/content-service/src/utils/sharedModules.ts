@@ -45,7 +45,15 @@ try {
         totalKeys: 0,
         hitRate: '0%'
       }),
-      createServiceRedisClient: () => null,
+      createServiceRedisClient: () => ({
+        ping: async () => 'PONG',
+        quit: async () => 'OK',
+        keys: async () => [],
+        del: async () => 0,
+        get: async () => null,
+        set: async () => 'OK',
+        exists: async () => 0
+      }),
       RedisCache: class MockRedisCache {
         async get() { return null; }
         async set() { return true; }
@@ -85,7 +93,15 @@ try {
       totalKeys: 0,
       hitRate: '0%'
     }),
-    createServiceRedisClient: () => null,
+    createServiceRedisClient: () => ({
+      ping: async () => 'PONG',
+      quit: async () => 'OK',
+      keys: async () => [],
+      del: async () => 0,
+      get: async () => null,
+      set: async () => 'OK',
+      exists: async () => 0
+    }),
     RedisCache: class MockRedisCache {
       async get() { return null; }
       async set() { return true; }

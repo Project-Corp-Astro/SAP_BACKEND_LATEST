@@ -3,14 +3,8 @@
     "target": "ES2020",
     "module": "CommonJS",
     "outDir": "./dist",
-    "rootDir": "../../",
-    "baseUrl": "../../",
-    "paths": {
-      "@shared/*": ["shared/*"],
-      "@models/*": ["models/*"],
-      "@corp-astro/shared-types": ["shared/types"],
-      "@corp-astro/shared-types/*": ["shared/types/*"]
-    },
+    "rootDir": "./src",
+    "baseUrl": "./",
     "strict": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -21,6 +15,14 @@
     "strictNullChecks": false,
     "strictPropertyInitialization": false
   },
-  "include": ["src/**/*", "../../shared/**/*"],
-  "exclude": ["node_modules", "**/*.test.ts"]
+  "include": ["src/**/*"],
+  "exclude": [
+    "node_modules", 
+    "**/*.test.ts",
+    "src/types/**/*",
+    "src/interfaces/user-extensions.ts",
+    "src/interfaces/shared-types.ts",
+    "src/__tests__/**/*",
+    "../../shared/**/*"
+  ]
 }

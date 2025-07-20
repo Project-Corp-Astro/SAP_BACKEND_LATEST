@@ -1,6 +1,69 @@
-import { Document } from 'mongoose';
-import { User, UserRole, Permission } from '@corp-astro/shared-types';
-import { AstrologyUserProfile, BusinessProfile, AstrologyPreferences, AstrologySubscription } from './astrology.interfaces';
+import { Document, Types } from 'mongoose';
+
+/**
+ * Basic User interface
+ */
+export interface User {
+  _id: string | Types.ObjectId;
+  username: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber?: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  roles: Types.ObjectId[];
+}
+
+/**
+ * User role type
+ */
+export type UserRole = string;
+
+/**
+ * Permission interface
+ */
+export interface Permission {
+  action: string;
+  resource: string;
+}
+
+/**
+ * Astrology profile interface
+ */
+export interface AstrologyUserProfile {
+  birthDate?: Date;
+  birthTime?: string;
+  birthPlace?: string;
+  zodiacSign?: string;
+}
+
+/**
+ * Business profile interface
+ */
+export interface BusinessProfile {
+  companyName: string;
+  industry?: string;
+  role?: string;
+}
+
+/**
+ * Astrology preferences interface
+ */
+export interface AstrologyPreferences {
+  preferredSystem?: string;
+  notifications?: boolean;
+}
+
+/**
+ * Astrology subscription interface
+ */
+export interface AstrologySubscription {
+  plan?: string;
+  active?: boolean;
+  expiresAt?: Date;
+}
 
 /**
  * Auth provider enum

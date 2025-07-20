@@ -4,10 +4,8 @@ import crypto from 'crypto';
 import { authenticator } from 'otplib';
 import QRCode from 'qrcode';
 import User from '../models/User';
-import { IUser } from '../../../../shared/interfaces/user.interface';
+import { IUser, logger, emailService } from '../utils/sharedModules';
 import { otpCache } from '../utils/redis';
-import emailService from '../../../../shared/utils/email';
-import logger from '../../../../shared/utils/logger';
 import { asIUser } from '../utils/type-assertions';
 // JWT secret key - should be stored in environment variables in production
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -15,7 +13,7 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '4h';
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key';
 const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
 // Add this import at the top of the file with other imports
-import RolePermissionModel from '../../../../models/mongodb/RolePermission.model';
+// import RolePermissionModel from '../../../../models/mongodb/RolePermission.model';
 // MFA settings
 const MFA_APP_NAME = process.env.MFA_APP_NAME || 'SAP Corp Astro';
 
@@ -65,7 +63,7 @@ export interface MFAData {
  * @param userData - User data
  * @returns Newly created user
  */
-export const register = async (userData: UserData): Promise<any> => {
+export const registerUser = async (userData: UserData): Promise<any> => {
   try {
     // Check if user already exists
     const existingUser = await User.findOne({ 
@@ -83,31 +81,23 @@ export const register = async (userData: UserData): Promise<any> => {
       }
     }
 
-    // Find the default 'user' role
-    const userRole = await RolePermissionModel.findOne({ 
-      role: 'user',
-      application: '*' 
-    });
-
-    if (!userRole) {
-      throw new Error('Default user role not found. Please contact support.');
-    }
-
-    // Create user with the 'user' role
+    // Create user with basic role
     const user = new User({
       ...userData,
       password: userData.password, // The pre-save hook will hash this
       isActive: true,
-      roles: [{ role: userRole._id }]
+      roles: [] // Will be populated with default role
     });
     
     // Save user with proper password handling
     await user.save();
     
-    // Send welcome email
+    // Send welcome email (if email service is available)
     try {
-      await emailService.sendWelcomeEmail(user.email, user.firstName);
-      logger.info(`Welcome email sent to ${user.email}`);
+      if (emailService && emailService.sendWelcomeEmail) {
+        await emailService.sendWelcomeEmail(user.email, user.firstName);
+        logger.info(`Welcome email sent to ${user.email}`);
+      }
     } catch (emailError) {
       logger.error('Failed to send welcome email:', emailError);
       // Don't throw error here as it shouldn't prevent registration
@@ -118,7 +108,7 @@ export const register = async (userData: UserData): Promise<any> => {
     delete userObject.password;
     
     // Log successful registration
-    logger.info(`New user registered: ${user.email} with role '${userRole.role}'`);
+    logger.info(`New user registered: ${user.email}`);
     
     return userObject;
   } catch (error) {

@@ -1,10 +1,12 @@
-import { IUser, UserDocument } from '../../../../shared/interfaces/user.interface';
+import { IUser } from './sharedModules';
+import { ExtendedUser } from '../interfaces/user-extensions-local';
+import { Document } from 'mongoose';
 
 /**
- * Helper function to cast UserDocument to IUser for TypeScript compatibility
+ * Helper function to cast Document to IUser for TypeScript compatibility
  * This is needed because UserDocument has optional properties while IUser has required properties
  */
-export function asIUser(user: UserDocument): IUser {
+export function asIUser(user: Document & any): IUser {
   return user as unknown as IUser;
 }
 

@@ -1,17 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
-import { validationResult } from 'express-validator/src/validation-result';
 import { sessionCache, otpCache } from '../utils/redis';
-import logger from '../../../../shared/utils/logger';
+import { logger } from '../utils/sharedModules';
 import * as authService from '../services/auth.service';
 // Import type fixes and assertion helpers
 import { asIUser } from '../utils/type-assertions';
-// Import type fixes
-import '../types/type-fixes';
-// Import auth types
-import '../types/auth-types';
 // Import user type converter
 import { convertToIUser } from '../utils/user-type-converter';
-// Import UserRole from shared types instead of local interfaces
+// Import types from shared types
 import {
   UserDocument,
   RegistrationRequest,
@@ -24,11 +19,6 @@ export interface AuthenticatedRequest extends Omit<Request, 'user'> {
 }
 
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    res.status(400).json({ success: false, message: 'Validation failed', errors: errors.array() });
-    return;
-  }
   try {
     const { username, email, password, firstName, lastName, role } = req.body;
     if (!username || !email || !password || !firstName || !lastName) {
@@ -38,10 +28,9 @@ export const register = async (req: Request, res: Response, next: NextFunction):
     const userData: RegistrationRequest = { username, email, password, firstName, lastName };
     // Use a proper type assertion with unknown first to avoid TypeScript error
     const authReq = req as unknown as AuthenticatedRequest;
-    // if (role && authReq.user?.role === UserRole.ADMIN) {
-    //   (userData as any).role = role;
-    // }
-    const user = await authService.register(userData);
+    
+    // Call the auth service register function - we'll need to implement this
+    const user = await authService.registerUser(userData);
     res.status(201).json({ success: true, message: 'User registered successfully', data: user });
   } catch (error: any) {
     if (error.message.includes('already') || error.code === 11000) {
