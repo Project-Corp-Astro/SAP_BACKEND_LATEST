@@ -27,7 +27,7 @@ spec:
           value: "3001"
         - name: AUTH_SERVICE_PORT
           value: "3001"
-        - name: MONGODB_URL
+        - name: MONGO_URI
           valueFrom:
             secretKeyRef:
               name: database-secrets
