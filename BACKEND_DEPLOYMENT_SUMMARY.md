@@ -17,8 +17,8 @@
    - Redis: Database 1 for auth caching
    - Endpoints: `/health`, `/auth/*`
 
-3. **User Service** - Port 3002 (Ready for deployment)
-   - Prepared deployment configuration
+3. **User Service** - Port 3002 (🔄 Currently Deploying)
+   - Deployment script fixed and running
    - Database: MongoDB Atlas (`mongodb-users-url` secret)
    - Redis: Database 2 for user caching
    - Endpoints: `/health`, `/users/*`, `/profile/*`

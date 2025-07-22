@@ -29,7 +29,7 @@ echo ""
 
 # Step 1: Build Docker Image
 echo -e "${YELLOW}🏗️ Step 1: Building Docker Image...${NC}"
-cd ../backend
+cd ../../backend
 docker build -f services/user-service/Dockerfile.simple -t $SERVICE_NAME:latest .
 
 if [ $? -eq 0 ]; then
