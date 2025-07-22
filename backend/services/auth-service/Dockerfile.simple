@@ -28,18 +28,18 @@ RUN addgroup -g 1001 -S nodejs && \
 # Set working directory
 WORKDIR /app
 
-# Copy shared modules first
-COPY backend/shared/ ./shared/
+# Copy shared modules first (corrected for backend directory context)
+COPY shared/ ./shared/
 
 # Copy package files
-COPY backend/services/auth-service/package*.json ./
-COPY backend/services/auth-service/tsconfig.json ./
+COPY services/auth-service/package*.json ./
+COPY services/auth-service/tsconfig.json ./
 
 # Install dependencies
 RUN npm install --legacy-peer-deps --include=dev
 
 # Copy source code
-COPY backend/services/auth-service/src/ ./src/
+COPY services/auth-service/src/ ./src/
 
 # Create mock for @sap/logger
 RUN mkdir -p node_modules/@sap && \
