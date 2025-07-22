@@ -17,8 +17,9 @@
    - Redis: Database 1 for auth caching
    - Endpoints: `/health`, `/auth/*`
 
-3. **User Service** - Port 3002 (🔄 Currently Deploying)
-   - Deployment script fixed and running
+3. **User Service** - Port 3002 (� Fixing Build Issues)
+   - Docker build failed due to missing TypeScript compiler
+   - Fixed Dockerfile to include TypeScript globally
    - Database: MongoDB Atlas (`mongodb-users-url` secret)
    - Redis: Database 2 for user caching
    - Endpoints: `/health`, `/users/*`, `/profile/*`
