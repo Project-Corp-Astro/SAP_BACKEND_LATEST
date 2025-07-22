@@ -1,0 +1,35 @@
+# API Gateway Extended Configuration
+# Add these routes to your existing API Gateway
+
+# External Services Configuration
+ASTRO_ENGINE_URL=https://astro-engine.corpastro.com
+ASTRO_RATAN_URL=https://astro-ratan.corpastro.com
+THIRD_APP_URL=https://third-app.example.com
+
+# API Gateway Routes
+routes:
+  # Existing SAP services
+  - path: "/api/auth/*"
+    target: "http://auth-service.sap-microservices.svc.cluster.local:3001"
+  - path: "/api/users/*"
+    target: "http://user-service.sap-microservices.svc.cluster.local:3002"
+  - path: "/api/subscription/*"
+    target: "http://subscription-service.sap-microservices.svc.cluster.local:3003"
+  - path: "/api/content/*"
+    target: "http://content-service.sap-microservices.svc.cluster.local:3005"
+    
+  # External applications
+  - path: "/api/astro-engine/*"
+    target: "${ASTRO_ENGINE_URL}"
+    strip_path: true
+    cors_enabled: true
+    
+  - path: "/api/astro-ratan/*"
+    target: "${ASTRO_RATAN_URL}"
+    strip_path: true
+    cors_enabled: true
+    
+  - path: "/api/third-app/*"
+    target: "${THIRD_APP_URL}"
+    strip_path: true
+    cors_enabled: true
