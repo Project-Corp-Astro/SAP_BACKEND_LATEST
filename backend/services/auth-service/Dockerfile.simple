@@ -48,8 +48,8 @@ RUN mkdir -p node_modules/@sap && \
 # Build the application
 RUN npm run build
 
-# Remove dev dependencies
-RUN npm prune --production
+# Skip pruning to avoid dependency conflicts in cloud environment
+# (dev dependencies will be excluded in production builds anyway)
 
 # Create necessary directories and set permissions
 RUN mkdir -p /app/logs && \
