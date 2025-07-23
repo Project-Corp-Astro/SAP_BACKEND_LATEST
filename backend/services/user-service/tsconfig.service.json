@@ -2,7 +2,10 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "skipLibCheck": true,
-    "noEmitOnError": false
+    "noEmitOnError": false,
+    "types": ["node", "express"],
+    "allowJs": true,
+    "strict": false
   },
   "include": [
     "src/**/*"
