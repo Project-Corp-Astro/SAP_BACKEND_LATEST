@@ -17,7 +17,8 @@ PROJECT_ID="sap-project-466005"
 REGION="asia-south1"
 CLUSTER_NAME="sap-backend-gke"
 SERVICE_NAME="user-service"
-IMAGE_TAG="asia-south1-docker.pkg.dev/${PROJECT_ID}/sap-microservices/${SERVICE_NAME}:latest"
+VERSION="v$(date +%Y%m%d-%H%M%S)"
+IMAGE_TAG="asia-south1-docker.pkg.dev/${PROJECT_ID}/sap-microservices/${SERVICE_NAME}:${VERSION}"
 
 echo -e "${YELLOW}📋 Configuration:${NC}"
 echo "Project ID: $PROJECT_ID"
@@ -56,6 +57,11 @@ fi
 echo -e "${YELLOW}🚀 Step 3: Deploy to Kubernetes...${NC}"
 echo "Command: cd ../deployment/microservices && kubectl apply -f user-service-deployment.yaml"
 cd ../deployment/microservices
+
+# Update the deployment YAML with the new image tag
+echo -e "${YELLOW}🔄 Updating deployment with new image: $IMAGE_TAG${NC}"
+sed -i "s|image: asia-south1-docker.pkg.dev/sap-project-466005/sap-microservices/user-service:.*|image: $IMAGE_TAG|g" user-service-deployment.yaml
+
 kubectl apply -f user-service-deployment.yaml
 
 if [ $? -eq 0 ]; then
