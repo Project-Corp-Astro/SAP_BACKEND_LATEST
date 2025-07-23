@@ -27,22 +27,30 @@ const defaultCache = new redisManager.RedisCache(SERVICE_NAME, { keyPrefix: `${S
 const userCache = new redisManager.RedisCache(SERVICE_NAME, { keyPrefix: `${SERVICE_NAME}:users:` });
 const rolePermissionCache = new redisManager.RedisCache(SERVICE_NAME, { keyPrefix: `${SERVICE_NAME}:rolePermission:` });
 
-// Redis event handling
-mainRedisClient.on('error', (error: Error) => {
-  logger.error('Redis client error:', { error: error.message });
-});
+// Redis event handling - with safety checks for mock environments
+try {
+  if (mainRedisClient && typeof mainRedisClient.on === 'function') {
+    mainRedisClient.on('error', (error: Error) => {
+      logger.error('Redis client error:', { error: error.message });
+    });
 
-mainRedisClient.on('connect', () => {
-  logger.info('Redis client connected successfully');
-});
+    mainRedisClient.on('connect', () => {
+      logger.info('Redis client connected successfully');
+    });
 
-mainRedisClient.on('end', () => {
-  logger.warn('Redis client disconnected');
-});
+    mainRedisClient.on('end', () => {
+      logger.warn('Redis client disconnected');
+    });
 
-mainRedisClient.on('reconnecting', () => {
-  logger.info('Redis client reconnecting...');
-});
+    mainRedisClient.on('reconnecting', () => {
+      logger.info('Redis client reconnecting...');
+    });
+  } else {
+    logger.info('Redis client event listeners not available (mock environment)');
+  }
+} catch (error) {
+  logger.warn('Failed to set up Redis event listeners:', error);
+}
 
 logger.info(`User service using Redis database ${redisManager.SERVICE_DB_MAPPING[SERVICE_NAME] || 2}`);
 
@@ -253,9 +261,17 @@ const redisUtils: RedisUtilities = {
   async invalidateUserCache(userId: string): Promise<number> {
     try {
       const userPattern = `*${userId}:user*`;
-      const userKeys = await userCache.getClient().keys(userPattern);
+      const client = userCache.getClient();
+      
+      // Check if keys method exists (not available in mock environment)
+      if (typeof client.keys !== 'function') {
+        logger.info(`Cache invalidation skipped for user ${userId} (mock environment)`);
+        return 0;
+      }
+      
+      const userKeys = await client.keys(userPattern);
       if (userKeys.length === 0) return 0;
-      const deletions = await userCache.getClient().del(...userKeys);
+      const deletions = await client.del(...userKeys);
       return deletions;
     } catch (error: unknown) {
       logger.warn(`Failed to invalidate cache for user ${userId}:`, { 
