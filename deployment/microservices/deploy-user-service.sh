@@ -1,6 +1,6 @@
 #!/bin/bash
 # 🚀 User Service Deployment Script for Google Cloud
-# This script builds and deploys the user service to GKE
+# Following the exact same pattern used for auth-service deployment
 
 set -e
 
@@ -27,42 +27,35 @@ echo "Service: $SERVICE_NAME"
 echo "Image: $IMAGE_TAG"
 echo ""
 
-# Step 1: Build Docker Image
-echo -e "${YELLOW}🏗️ Step 1: Building Docker Image...${NC}"
+# Step 1: Build User Service (same as auth service pattern)
+echo -e "${YELLOW}🏗️ Step 1: Building User Service Docker Image...${NC}"
+echo "Command: docker build -f services/user-service/Dockerfile.simple -t $IMAGE_TAG ."
 cd ../../backend
-docker build -f services/user-service/Dockerfile.simple -t $SERVICE_NAME:latest .
+docker build -f services/user-service/Dockerfile.simple -t $IMAGE_TAG .
 
 if [ $? -eq 0 ]; then
-    echo -e "${GREEN}✅ Docker image built successfully${NC}"
+    echo -e "${GREEN}✅ User Service Docker image built successfully${NC}"
 else
-    echo -e "${RED}❌ Docker build failed${NC}"
+    echo -e "${RED}❌ User Service Docker build failed${NC}"
     exit 1
 fi
 
-# Step 2: Tag and Push to Artifact Registry
-echo -e "${YELLOW}🏷️ Step 2: Tagging and pushing to Artifact Registry...${NC}"
-docker tag $SERVICE_NAME:latest $IMAGE_TAG
+# Step 2: Push to Artifact Registry (same as auth service pattern)
+echo -e "${YELLOW}🏷️ Step 2: Push into the artifact registry...${NC}"
+echo "Command: docker push $IMAGE_TAG"
 docker push $IMAGE_TAG
 
 if [ $? -eq 0 ]; then
-    echo -e "${GREEN}✅ Image pushed to Artifact Registry${NC}"
+    echo -e "${GREEN}✅ Image pushed to Artifact Registry successfully${NC}"
 else
     echo -e "${RED}❌ Image push failed${NC}"
     exit 1
 fi
 
-# Step 3: Get GKE Credentials
-echo -e "${YELLOW}🔐 Step 3: Getting GKE credentials...${NC}"
-gcloud container clusters get-credentials $CLUSTER_NAME --region=$REGION --project=$PROJECT_ID
-
-# Step 3.5: Ensure secrets are deployed
-echo -e "${YELLOW}� Step 3.5: Ensuring secrets are deployed...${NC}"
+# Step 3: Deploy to Kubernetes (same as auth service pattern)
+echo -e "${YELLOW}🚀 Step 3: Deploy to Kubernetes...${NC}"
+echo "Command: cd ../deployment/microservices && kubectl apply -f user-service-deployment.yaml"
 cd ../deployment/microservices
-kubectl create namespace sap-microservices --dry-run=client -o yaml | kubectl apply -f -
-kubectl apply -f secrets.yaml
-
-# Step 4: Apply Deployment
-echo -e "${YELLOW}🚀 Step 4: Deploying to Kubernetes...${NC}"
 kubectl apply -f user-service-deployment.yaml
 
 if [ $? -eq 0 ]; then
@@ -72,54 +65,33 @@ else
     exit 1
 fi
 
-# Step 5: Wait for deployment to be ready
-echo -e "${YELLOW}⏳ Step 5: Waiting for deployment to be ready...${NC}"
-kubectl wait --for=condition=available --timeout=300s deployment/user-service -n sap-microservices
-
-# Step 6: Check deployment status
-echo -e "${YELLOW}📊 Step 6: Checking deployment status...${NC}"
-kubectl get pods -l app=user-service -n sap-microservices
-kubectl get service user-service -n sap-microservices
-
-# Step 7: Test health endpoint
-echo -e "${YELLOW}🏥 Step 7: Testing health endpoint...${NC}"
-echo "Waiting for pods to be ready..."
-sleep 30
-
-# Get pod name
-POD_NAME=$(kubectl get pods -l app=user-service -n sap-microservices -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-
-if [ ! -z "$POD_NAME" ]; then
-    echo "Testing health endpoint on pod: $POD_NAME"
-    kubectl logs $POD_NAME -n sap-microservices --tail=20
-    
-    echo ""
-    echo "Port forwarding to test health endpoint..."
-    kubectl port-forward service/user-service 8081:3002 -n sap-microservices &
-    PORT_FORWARD_PID=$!
-    
-    sleep 5
-    
-    echo "Testing health endpoint..."
-    curl -f http://localhost:8081/health || echo "Health check failed"
-    
-    # Clean up port forward
-    kill $PORT_FORWARD_PID 2>/dev/null || true
-else
-    echo -e "${RED}❌ No running pods found${NC}"
-fi
-
 echo ""
 echo -e "${GREEN}🎉 User Service Deployment Complete!${NC}"
 echo ""
-echo -e "${YELLOW}📋 Summary:${NC}"
-echo "• Docker image: $IMAGE_TAG"
-echo "• Deployment: user-service in sap-microservices namespace"
-echo "• Service endpoint: http://user-service.sap-microservices.svc.cluster.local:3002"
-echo "• Health check: http://user-service.sap-microservices.svc.cluster.local:3002/health"
+echo -e "${YELLOW}📋 Now run these commands to monitor your deployment (same as auth-service):${NC}"
 echo ""
-echo -e "${YELLOW}🔍 Next steps:${NC}"
-echo "1. Monitor logs: kubectl logs -l app=user-service -n sap-microservices -f"
-echo "2. Check status: kubectl get pods -l app=user-service -n sap-microservices"
-echo "3. Test API: kubectl port-forward service/user-service 8081:3002 -n sap-microservices"
+echo -e "${YELLOW}# Check the deployment status${NC}"
+echo "kubectl get pods -n sap-microservices -l app=user-service"
 echo ""
+echo -e "${YELLOW}# Check the service${NC}"
+echo "kubectl get service user-service -n sap-microservices"
+echo ""
+echo -e "${YELLOW}# Watch the pod startup in real-time${NC}"
+echo "kubectl get pods -n sap-microservices -l app=user-service -w"
+echo ""
+echo -e "${YELLOW}# View the user service logs${NC}"
+echo "kubectl logs -l app=user-service -n sap-microservices -f"
+echo ""
+echo -e "${YELLOW}# If you want to see logs from a specific pod${NC}"
+echo "kubectl logs deployment/user-service -n sap-microservices -f"
+echo ""
+echo -e "${YELLOW}# Check if the health endpoint is responding${NC}"
+echo "kubectl port-forward service/user-service 3002:3002 -n sap-microservices &"
+echo ""
+echo -e "${YELLOW}# Restart the deployment to pick up new environment variables${NC}"
+echo "kubectl rollout restart deployment/user-service -n sap-microservices"
+echo ""
+echo -e "${YELLOW}# Check pod events to see why they might be pending${NC}"
+echo "kubectl describe pods -l app=user-service -n sap-microservices"
+echo ""
+echo -e "${GREEN}✅ User Service is now deployed using the same pattern as auth-service!${NC}"
