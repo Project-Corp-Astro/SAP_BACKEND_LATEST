@@ -54,6 +54,14 @@ spec:
             port: 5001
           initialDelaySeconds: 5
           periodSeconds: 5
+        volumeMounts:
+        - name: routes-config
+          mountPath: /app/config
+          readOnly: true
+      volumes:
+      - name: routes-config
+        configMap:
+          name: api-gateway-routes
 ---
 apiVersion: v1
 kind: Service
