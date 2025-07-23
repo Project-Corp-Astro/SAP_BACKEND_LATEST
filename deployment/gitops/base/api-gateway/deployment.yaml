@@ -26,13 +26,13 @@ spec:
         - name: PORT
           value: "3000"
         - name: AUTH_SERVICE_URL
-          value: "http://auth-service:3001"
+          value: "http://auth-service.sap-microservices.svc.cluster.local:3001"
         - name: USER_SERVICE_URL
-          value: "http://user-service:3002"
+          value: "http://user-service.sap-microservices.svc.cluster.local:3002"
         - name: CONTENT_SERVICE_URL
-          value: "http://content-service:3003"
+          value: "http://content-service.sap-microservices.svc.cluster.local:3005"
         - name: SUBSCRIPTION_SERVICE_URL
-          value: "http://subscription-service:3004"
+          value: "http://subscription-service.sap-microservices.svc.cluster.local:3003"
         - name: REDIS_URL
           value: "redis://redis-manager:6379"
         resources:
