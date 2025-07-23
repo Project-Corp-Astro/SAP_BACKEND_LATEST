@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt';
+import * as bcrypt from 'bcrypt';
 import userServiceLogger from '../utils/logger';
 import UserModel, { IUserDocument } from '../models/User.model';
 import UserActivity, { ActivityType } from '../models/UserActivity';

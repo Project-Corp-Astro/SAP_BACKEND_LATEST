@@ -16,7 +16,6 @@
     "@sap/logger": "file:../../shared/logger",
     "bcrypt": "^5.1.0",
     "cors": "^2.8.5",
-    "detect-port": "^1.5.1",
     "dotenv": "^16.0.0",
     "express": "^4.17.3",
     "helmet": "^8.1.0",

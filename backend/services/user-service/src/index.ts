@@ -8,13 +8,12 @@ import monitoringRoutes from './routes/monitoring.routes';
 import logger, { requestLogger, errorLogger } from './utils/logger';
 import { performanceMiddleware } from './utils/performance';
 import redisUtils from './utils/redis';
-import detectPort from 'detect-port';
 import roleRoutes from './routes/role.routes';
 import { authMiddleware } from './middlewares/auth.middleware';
 
 // Initialize Express app
 const app = express();
-const PREFERRED_PORT = parseInt(process.env.USER_SERVICE_PORT || '3002', 10); // Use port from .env file (3002)
+const PORT = parseInt(process.env.PORT || process.env.USER_SERVICE_PORT || '3002', 10);
 
 // Middleware
 app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
@@ -117,22 +116,16 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 let server: any;
 const startServer = async () => {
   try {
-    const availablePort = await detectPort(PREFERRED_PORT);
-
-    if (availablePort !== PREFERRED_PORT) {
-      logger.warn(`Preferred port ${PREFERRED_PORT} is in use, using available port ${availablePort}`);
-    }
-
-    server = app.listen(availablePort, () => {
+    server = app.listen(PORT, () => {
       logger.info(`
       ==============================================
       User Service Configuration
       ==============================================
-      Service Port: ${availablePort}
+      Service Port: ${PORT}
       MongoDB URI: ${MONGO_URI}
       ==============================================
       `);
-      logger.info(`Health check available at http://localhost:${availablePort}/health`);
+      logger.info(`Health check available at http://localhost:${PORT}/health`);
     });
 
   } catch (error: any) {
@@ -176,7 +169,7 @@ process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
 
 process.on('uncaughtException', (error: Error) => {
   if ((error as any).code === 'EADDRINUSE') {
-    logger.error(`Port ${PREFERRED_PORT} is already in use. Please use a different port or stop the process using this port.`, { error: error.message });
+    logger.error(`Port ${PORT} is already in use. Please use a different port or stop the process using this port.`, { error: error.message });
     setTimeout(() => process.exit(1), 1000);
   } else {
     logger.error('Uncaught Exception:', { error: error.message, stack: error.stack });
