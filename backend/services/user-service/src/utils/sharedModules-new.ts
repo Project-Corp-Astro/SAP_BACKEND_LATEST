@@ -20,44 +20,16 @@ const redisManager = {
     totalKeys: 0,
     hitRate: '0%'
   }),
-  createServiceRedisClient: (serviceName?: string, options?: any) => ({
-    host: 'localhost',
-    port: 6379,
-    password: undefined,
-    db: 2,
-    enableReadyCheck: true,
-    ping: async () => 'PONG',
-    quit: async () => 'OK',
-    on: (event: string, listener: (...args: any[]) => void) => {
-      // Mock event listener - just log that events are being registered
-      console.log(`Redis event listener registered for: ${event}`);
-    },
-    emit: (event: string, ...args: any[]) => {
-      // Mock event emitter
-      console.log(`Redis event emitted: ${event}`, args);
-    },
-    get: async (key: string) => null,
-    set: async (key: string, value: any, ...args: any[]) => 'OK',
-    del: async (...keys: string[]) => 1,
-    exists: async (key: string) => 0
-  }),
+  createServiceRedisClient: () => null,
   RedisCache: class MockRedisCache {
     constructor(serviceName?: string, options?: any) {}
     async get(key: string): Promise<any> { return null; }
-    async set(key: string, value: any, ttl?: number): Promise<boolean> { return true; }
-    async del(key: string): Promise<number> { return 1; }
+    async set(key: string, value: any, ttl?: number): Promise<void> {}
+    async del(key: string): Promise<void> {}
     async exists(key: string): Promise<boolean> { return false; }
-    async flush(): Promise<string> { return 'OK'; }
+    async flush(): Promise<void> {}
     async keys(pattern: string): Promise<string[]> { return []; }
     getStats() { return { hits: 0, misses: 0, hitRate: 0 }; }
-    getClient() { 
-      return {
-        keys: async (pattern: string) => [],
-        del: async (...keys: string[]) => 1,
-        quit: async () => 'OK',
-        ping: async () => 'PONG'
-      };
-    }
   },
   SERVICE_DB_MAPPING: {
     user: 2,

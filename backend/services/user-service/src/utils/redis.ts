@@ -11,7 +11,7 @@ export const defaultCache = new RedisCache(SERVICE_NAME, { keyPrefix: `${SERVICE
 export const userCache = new RedisCache(SERVICE_NAME, { keyPrefix: `${SERVICE_NAME}:users:` });
 export const rolePermissionCache = new RedisCache(SERVICE_NAME, { keyPrefix: `${SERVICE_NAME}:rolePermission:` });
 
-const redisClient: IORedis = createServiceRedisClient(SERVICE_NAME, {
+const redisClient: any = createServiceRedisClient(SERVICE_NAME, {
   host: config.get('redis.host', 'localhost'),
   port: parseInt(config.get('redis.port', '6379')),
   password: config.get('redis.password', '') || undefined,
