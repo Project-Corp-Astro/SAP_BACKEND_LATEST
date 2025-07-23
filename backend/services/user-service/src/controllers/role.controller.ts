@@ -2,8 +2,33 @@ import { Request, Response } from 'express';
 import { Types } from 'mongoose';
 import RolePermissionModel from '../models/RolePermission.model';
 import { PermissionService } from '../services/PermissionService';
-import UserModel from '../../../../models/mongodb/User.model';
-import { BadRequestError, NotFoundError, UnauthorizedError } from '../../../../src/scripts/utils/errors';
+// Use local User model instead of problematic import
+import UserModel from '../models/User.model';
+
+// Use local error classes instead of importing from problematic paths
+class BadRequestError extends Error {
+  statusCode = 400;
+  constructor(message: string) {
+    super(message);
+    this.name = 'BadRequestError';
+  }
+}
+
+class NotFoundError extends Error {
+  statusCode = 404;
+  constructor(message: string) {
+    super(message);
+    this.name = 'NotFoundError';
+  }
+}
+
+class UnauthorizedError extends Error {
+  statusCode = 401;
+  constructor(message: string) {
+    super(message);
+    this.name = 'UnauthorizedError';
+  }
+}
 
 interface ValidationError {
   param: string;
@@ -119,12 +144,22 @@ export const RoleController = {
     }
 
     // Remove any existing role assignment for same role
-    user.roles = user.roles.filter(
-      roleId => !roleId.equals(rolePermission._id)
-    );
+    // Remove role from user using proper ObjectId comparison
+    user.roles = user.roles?.filter(
+      roleId => {
+        // Handle both ObjectId and string comparisons
+        const roleIdStr = typeof roleId === 'string' ? roleId : roleId.toString();
+        const targetIdStr = rolePermission._id.toString();
+        return roleIdStr !== targetIdStr;
+      }
+    ) || [];
 
-    // Add the new role reference
-    user.roles.push(rolePermission._id);
+    // Add the new role reference with proper structure
+    user.roles.push({
+      _id: rolePermission._id.toString(),
+      name: rolePermission.role,
+      permissions: rolePermission.permissions
+    });
 
     await user.save();
 
@@ -214,7 +249,8 @@ export const RoleController = {
         userId,
         permission,
         application,
-        req.user.rolePermissionIds
+        // Use proper typing for req.user
+        (req.user as any).rolePermissionIds
       );
   
       res.status(200).json({

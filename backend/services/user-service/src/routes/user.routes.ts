@@ -1,150 +1,84 @@
-import express, { Request, Response, NextFunction, Router } from 'express';
-import * as userController from '../controllers/user.controller';
+import express from 'express';
+import { 
+  getUsers,
+  getUserById,
+  updateUser,
+  deleteUser,
+  updateUserStatus,
+  updateProfile,
+  changePassword,
+  updateSecurityPreferences,
+  getUserDevices,
+  removeUserDevice,
+  getUserActivity
+} from '../controllers/user.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import { requirePermission } from '../middlewares/requirePermission';
 
-// Export controllers for testing purposes
-export { userController };
+const router = express.Router();
 
-// Type assertion for middleware to fix TypeScript compatibility issues
-type RequestHandler = (req: Request, res: Response, next: NextFunction) => Promise<Response | void> | Response | void;
-const asRequestHandler = (handler: RequestHandler) => handler as express.RequestHandler;
+// Apply auth middleware to all routes
+router.use(authMiddleware as any);
 
-// Wrapper function for controller functions to fix TypeScript compatibility issues
-export const wrapController = (controller: any): express.RequestHandler => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    // @ts-ignore - Suppressing TypeScript errors for controller compatibility
-    return controller(req, res, next);
-  };
-};
-
-// This is a temporary solution until we can properly fix the middleware type compatibility
-
-const router: Router = express.Router();
-
-/**
- * @route GET /api/users
- * @desc Get all users with pagination and filtering
- * @access Private (Admin)
- */
+// GET /api/users - Get all users with pagination
 router.get('/', 
-  // asRequestHandler(authMiddleware), 
-  // requirePermission('user:read', { application: 'system',allowSuperadmin:true }),
-  wrapController(userController.getUsers)
+  requirePermission('user:read', { application: 'system' }) as any,
+  getUsers as any
 );
 
-
-
-
-
-/**
- * @route GET /api/users/:userId
- * @desc Get user by ID
- * @access Private (Admin or Self)
- */
+// GET /api/users/:userId - Get user by ID
 router.get('/:userId', 
- 
-  asRequestHandler(authMiddleware), 
-   requirePermission('user:read', { application: 'system',allowSuperadmin:true }),
-  wrapController(userController.getUserById)
+  requirePermission('user:read', { application: 'system' }) as any,
+  getUserById as any
 );
 
-/**
- * @route PUT /api/users/:userId
- * @desc Update user
- * @access Private (Admin or Self)
- */
+// PUT /api/users/:userId - Update user
 router.put('/:userId', 
-  asRequestHandler(authMiddleware), 
-  requirePermission('user:update', { application: 'system',allowSuperadmin:true }),
-  wrapController(userController.updateUser)
+  requirePermission('user:update', { application: 'system' }) as any,
+  updateUser as any
 );
 
-/**
- * @route DELETE /api/users/:userId
- * @desc Delete user
- * @access Private (Admin only)
- */
+// DELETE /api/users/:userId - Delete user
 router.delete('/:userId', 
-  asRequestHandler(authMiddleware), 
-  requirePermission('user:delete', { application: 'system',allowSuperadmin:true }),
-  wrapController(userController.deleteUser)
+  requirePermission('user:delete', { application: 'system' }) as any,
+  deleteUser as any
 );
 
-/**
- * @route PATCH /api/users/:userId/status
- * @desc Update user active status
- * @access Private (Admin only)
- */
+// PATCH /api/users/:userId/status - Update user status
 router.patch('/:userId/status', 
-  asRequestHandler(authMiddleware), 
-  requirePermission('user:update', { application: 'system',allowSuperadmin:true }),
-  wrapController(userController.updateUserStatus)
-);
-/**
- * @route PUT /api/users/profile
- * @desc Update authenticated user's profile
- * @access Private
- */
-router.put('/profile', 
-  asRequestHandler(authMiddleware),
-  requirePermission('user:update', { application: 'system',allowSuperadmin:true }),
-  wrapController(userController.updateProfile)
+  requirePermission('user:status:update', { application: 'system' }) as any,
+  updateUserStatus as any
 );
 
-/**
- * @route PUT /api/users/password
- * @desc Change user password
- * @access Private
- */
-router.put('/password', 
-  asRequestHandler(authMiddleware),
-  requirePermission('user:update', { application: 'system',allowSuperadmin:true }),
-  wrapController(userController.changePassword)
+// PATCH /api/users/profile - Update own profile (no special permission needed - users can update their own profile)
+router.patch('/profile', 
+  updateProfile as any
 );
 
-/**
- * @route PUT /api/users/security-preferences
- * @desc Update user security preferences
- * @access Private
- */
-router.put('/security-preferences', 
-  asRequestHandler(authMiddleware),
-  requirePermission('user:update', { application: 'system',allowSuperadmin:true }),
-  wrapController(userController.updateSecurityPreferences)
+// PATCH /api/users/password - Change password (no special permission needed - users can change their own password)
+router.patch('/password', 
+  changePassword as any
 );
 
-/**
- * @route GET /api/users/:userId/activity
- * @desc Get user activity log
- * @access Private (Self or Admin)
- */
-router.get('/:userId/activity', 
-  asRequestHandler(authMiddleware),
-  requirePermission('user:read', { application: 'system',allowSuperadmin:true }),
-  wrapController(userController.getUserActivity)
+// PATCH /api/users/security - Update security preferences (no special permission needed)
+router.patch('/security', 
+  updateSecurityPreferences as any
 );
 
-/**
- * @route GET /api/users/devices
- * @desc Get user devices
- * @access Private
- */
+// GET /api/users/devices - Get user devices (no special permission needed - users can view their own devices)
 router.get('/devices', 
-  asRequestHandler(authMiddleware),
-  requirePermission('user:read', { application: 'system',allowSuperadmin:true }),
-  wrapController(userController.getUserDevices)
+  getUserDevices as any
 );
 
-/**
- * @route DELETE /api/users/devices/:deviceId
- * @desc Remove user device
- * @access Private
- */
+// DELETE /api/users/devices/:deviceId - Remove user device (no special permission needed)
 router.delete('/devices/:deviceId', 
-  asRequestHandler(authMiddleware),
-  requirePermission('user:delete', { application: 'system',allowSuperadmin:true }),
-  wrapController(userController.removeUserDevice)
+  removeUserDevice as any
+);
+
+// GET /api/users/:userId/activity - Get user activity
+router.get('/:userId/activity', 
+  requirePermission('user:activity:read', { application: 'system' }) as any,
+  getUserActivity as any
 );
 
 export default router;

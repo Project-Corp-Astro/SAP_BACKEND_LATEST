@@ -1,4 +1,4 @@
-import UserModel from '../models/User';
+import UserModel from '../models/User.model';
 import RolePermissionModel from '../models/RolePermission.model';
 import { Types } from 'mongoose';
 import redis from '../utils/redis';

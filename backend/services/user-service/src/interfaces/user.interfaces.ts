@@ -1,5 +1,5 @@
 import { Document } from 'mongoose';
-import type { Permission, UserRole } from '@corp-astro/shared-types';
+import type { Permission, UserRole } from './local-shared-types';
 
 import { ActivityType } from '../models/UserActivity';
 import { DeviceType, DeviceLocation } from '../models/UserDevice';
@@ -28,6 +28,9 @@ import {
   JwtPayload,
 } from './shared-types';
 
+// Export UserDocument for use by other modules
+export { UserDocument } from './shared-types';
+
 /**
  * Legacy User interface - use ExtendedUser from shared-types.ts instead
  * @deprecated Use ExtendedUser from shared-types.ts instead
@@ -36,5 +39,5 @@ export interface IUser extends ExtendedUser {
   username: string;
   phoneNumber?: string;
   isActive: boolean;
-  permissions: Permission[]; // from shared-types
+  // permissions inherited from ExtendedUser as string[]
 }

@@ -1,18 +1,26 @@
 import bcrypt from 'bcrypt';
 import userServiceLogger from '../utils/logger';
-import User from '../models/User';
+import UserModel, { IUserDocument } from '../models/User.model';
 import UserActivity, { ActivityType } from '../models/UserActivity';
 import UserDevice from '../models/UserDevice';
 import { trackDatabaseOperation } from '../utils/performance';
 import RolePermissionModel from '../models/RolePermission.model';
 
 import {
-  UserDocument,
   UserFilter,
   SecurityPreferences,
   ActivityFilter,
   ActivityPaginationResult
 } from '../interfaces/shared-types';
+
+// Use the model from User.model.ts instead of User.ts
+const User = UserModel;
+type UserDocument = IUserDocument;
+
+// Type adapter function to convert mongoose documents to our interface
+const adaptUserDocument = (doc: any): UserDocument | null => {
+  return doc as UserDocument | null;
+};
 import redis from '../utils/redis';
 
 interface FormattedUser {
@@ -289,7 +297,7 @@ class UserService {
         }
 
         const existing = await trackDatabaseOperation<UserDocument | null>('findUserByEmail', async () =>
-          User.findOne({ email: updateData.email, _id: { $ne: userId } }).exec()
+          User.findOne({ email: updateData.email, _id: { $ne: userId } }).exec() as Promise<UserDocument | null>
         );
         if (existing) {
           try {
@@ -307,7 +315,7 @@ class UserService {
           updateFields[key] = updateData[key as keyof Partial<UserDocument>];
         }
       });
-
+ 
       if ((updateData.firstName || updateData.lastName) && !updateData.username) {
         const currentUser = await trackDatabaseOperation<UserDocument | null>('findUserById', async () =>
           User.findById(userId).exec()
@@ -466,7 +474,7 @@ class UserService {
       );
       if (!user) throw new Error('User not found');
 
-      const isMatch = await bcrypt.compare(currentPassword, user.password);
+      const isMatch = await bcrypt.compare(currentPassword, user.password!);
       if (!isMatch) throw new Error('Current password is incorrect');
 
       const updatedUser = await trackDatabaseOperation<UserDocument | null>('updatePassword', async () => {
@@ -600,10 +608,11 @@ class UserService {
 
       const result: ActivityPaginationResult = {
         activities,
-        totalActivities: total,
-        totalPages: Math.ceil(total / limit),
-        currentPage: page,
-        activitiesPerPage: limit
+        total,
+        page,
+        pages: Math.ceil(total / limit),
+        hasNext: page < Math.ceil(total / limit),
+        hasPrev: page > 1
       };
 
       try {

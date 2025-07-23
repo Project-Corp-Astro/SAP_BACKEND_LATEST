@@ -10,6 +10,7 @@
       "@corp-astro/shared-types": ["shared/types"],
       "@corp-astro/shared-types/*": ["shared/types/*"]
     },
+    "typeRoots": ["./src/types", "./node_modules/@types"],
     "strict": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -21,5 +22,12 @@
     "strictPropertyInitialization": false
   },
   "include": ["src/**/*", "../../shared/**/*"],
-  "exclude": ["node_modules", "**/*.test.ts"]
+  "exclude": [
+    "node_modules",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "src/__tests__/**/*",
+    "src/mocks/**/*",
+    "src/test/**/*"
+  ]
 }

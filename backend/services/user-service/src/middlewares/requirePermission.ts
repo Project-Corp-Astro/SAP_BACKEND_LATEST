@@ -1,9 +1,34 @@
 import { Request, Response, NextFunction } from 'express';
 import { PermissionService } from '../services/PermissionService';
-import { ForbiddenError, UnauthorizedError } from '../../../../src/scripts/utils/errors';
-import { AuthUser } from '../../../../shared/types/auth-user'; // adjust path as needed
 
+// Use local error classes instead of importing from problematic paths
+class ForbiddenError extends Error {
+  statusCode = 403;
+  constructor(message: string) {
+    super(message);
+    this.name = 'ForbiddenError';
+  }
+}
 
+class UnauthorizedError extends Error {
+  statusCode = 401;
+  constructor(message: string) {
+    super(message);
+    this.name = 'UnauthorizedError';
+  }
+}
+
+// Import proper user interface instead of defining locally
+import { IUserDocument } from '../models/User.model';
+
+// Define AuthUser with all required properties
+interface AuthUser extends Partial<IUserDocument> {
+  _id?: string;
+  id?: string;
+  email: string;
+  role?: string;
+  rolePermissionIds?: string[];
+}
 
 // Extend the Express Request type to include our user
 declare global {

@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import logger from '../utils/logger';
 import userService from '../services/user.service';
 import { UserDocument, SecurityPreferences, ExtendedUser, UserFilter, UserPaginationResult, JwtPayload } from '../interfaces/shared-types';
-import { User, UserRole, Permission, ApiResponse, PaginatedResponse } from '@corp-astro/shared-types';
+import { User, UserRole, Permission, ApiResponse, PaginatedResponse } from '../interfaces/local-shared-types';
 
 const serviceLogger = logger;
 

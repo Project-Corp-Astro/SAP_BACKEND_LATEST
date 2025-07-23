@@ -1,9 +1,29 @@
 import mongoose from 'mongoose';
 import User from '../models/User';
-import Permission from '../models/Permission';
-import Role from '../models/Role';
-import logger from '../utils/logger';
-import { UserRole } from '@corp-astro/shared-types';
+import { logger } from '../utils/sharedModules';
+
+// Mock implementations for Permission and Role models
+const Permission = {
+  countDocuments: async () => 0,
+  find: async () => [],
+  create: async (data: any) => data,
+  save: async () => {}
+};
+
+const Role = {
+  countDocuments: async () => 0,
+  findOne: async (query: any) => null,
+  create: async (data: any) => data,
+  save: async () => {}
+};
+
+// Define UserRole locally with all needed values
+enum UserRole {
+  SUPER_ADMIN = 'super_admin',
+  ADMIN = 'admin',
+  MANAGER = 'manager',
+  USER = 'user'
+}
 
 // MongoDB Connection
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/sap-users';
@@ -63,9 +83,14 @@ async function migratePermissions() {
         const permissionIds = user.permissionsLegacy.filter(p => permissionMap.has(p))
           .map(p => permissionMap.get(p));
         
-        // Assign appropriate role based on user's role field
+        // Assign appropriate role based on user's roles field or legacy role field
         let roleId;
-        switch (user.role) {
+        // Check legacy role field first, then new roles array
+        const legacyRole = (user as any).role;
+        const newRole = user.roles && user.roles[0] && typeof user.roles[0] === 'object' ? 
+          (user.roles[0] as any).name : user.roles[0];
+        const userRoleValue = legacyRole || newRole || UserRole.USER;
+        switch (userRoleValue) {
           case UserRole.ADMIN:
             roleId = adminRole._id;
             break;

@@ -32,7 +32,7 @@ export interface ExtendedUser extends BaseUser {
   fullName?: string;
   timezone?: string;
   language?: string;
-  userLocation?: Address; // Renamed from address to avoid Document conflict
+  address?: Address;
   socialLinks?: SocialLinks;
   profilePicture?: string;
   bio?: string;
@@ -59,20 +59,26 @@ export interface ExtendedUser extends BaseUser {
   }>;
 }
 
-// Document interface for Mongoose - create custom interface without Document conflicts
-export interface UserDocument extends BaseUser {
+// Document interface for Mongoose - clean interface to avoid conflicts
+export interface UserDocument extends Document {
   _id: string;
-  save(): Promise<UserDocument>;
-  remove(): Promise<UserDocument>;
-  toObject(): ExtendedUser;
-  toJSON(): ExtendedUser;
-  // Include all ExtendedUser properties explicitly
+  username: string;
+  email: string;
+  password?: string;
+  firstName?: string;
+  lastName?: string;
+  isActive?: boolean;
+  isVerified?: boolean;
+  lastLogin?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
+  role?: string;
   phoneNumber?: string;
   isEmailVerified?: boolean;
   avatar?: string;
   userAddress?: UserAddress | string;
   metadata?: Record<string, any>;
-  preferences?: UserPreferences;
+  userPreferences?: UserPreferences;
   securityPreferences?: SecurityPreferences;
   fullName?: string;
   timezone?: string;
@@ -93,15 +99,6 @@ export interface UserDocument extends BaseUser {
   tags?: string[];
   customFields?: Record<string, any>;
   subscriptionId?: string;
-  permissions?: string[];
-  devices?: DeviceInfo[];
-  rolePermissionIds?: string[];
-  roles?: Array<{
-    _id: string;
-    name?: string;
-    role?: string;
-    permissions?: string[];
-  }>;
 }
 
 // User preferences
@@ -165,7 +162,6 @@ export interface SecurityPreferences {
   twoFactorEnabled?: boolean;
   loginNotifications?: boolean;
   deviceTracking?: boolean;
-  activityAlerts?: boolean;
 }
 
 // Device information
@@ -270,24 +266,4 @@ export interface JwtPayload {
   rolePermissionIds?: string[];
   iat?: number;
   exp?: number;
-}
-
-// Additional aliases and exports for backward compatibility
-export const ThemePreference = ThemeType;
-export const AppAccess = ApplicationType;
-
-export interface NotificationPreferences extends NotificationSettings {}
-
-export interface IUserDevice extends DeviceInfo {}
-
-export interface IUserActivity {
-  _id?: string;
-  userId: string;
-  type: ActivityType;
-  description?: string;
-  ipAddress?: string;
-  userAgent?: string;
-  location?: string;
-  timestamp?: Date;
-  metadata?: Record<string, any>;
 }

@@ -1,63 +1,53 @@
-import { Router } from 'express';
-import { getUserRolePermissions, RoleController } from '../controllers/role.controller';
-import { requirePermission } from '../middlewares/requirePermission';
-import { asyncHandler } from '../middlewares/validation.middleware';
+import express from 'express';
+import { RoleController, getUserRolePermissions } from '../controllers/role.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
+import { requirePermission } from '../middlewares/requirePermission';
 
+const router = express.Router();
 
-const router = Router();
+// Apply auth middleware to all routes
+router.use(authMiddleware as any);
 
-router.use(asyncHandler(authMiddleware));
-
-// Create a new role with permissions
-router.post(
-  '/',
-  requirePermission('role:create', { application: 'system',allowSuperadmin:true }),
-  asyncHandler(RoleController.createRole)
+// GET /api/roles - Get all roles
+router.get('/', 
+  requirePermission('role:read', { application: 'system' }) as any,
+  RoleController.getRoles as any
 );
 
-// Update role permissions
-router.put(
-  '/:roleId/permissions',
-  requirePermission('role:update', { application: 'system',allowSuperadmin:true }),
-  asyncHandler(RoleController.updateRolePermissions)
+// POST /api/roles - Create new role
+router.post('/', 
+  requirePermission('role:create', { application: 'system' }) as any,
+  RoleController.createRole as any
 );
 
-// Assign role to user
-router.post(
-  '/assign',
-  requirePermission('user:assign', { application: 'system',allowSuperadmin:true }),
-  asyncHandler(RoleController.assignRoleToUser)
+// PUT /api/roles/:id - Update role permissions
+router.put('/:id', 
+  requirePermission('role:update', { application: 'system' }) as any,
+  RoleController.updateRolePermissions as any
 );
 
-// List all roles (optionally filtered by application)
-router.get(
-  '/',
-  requirePermission('role:read', { application: 'system',allowSuperadmin:true }),
-  asyncHandler(RoleController.listRoles)
+// DELETE /api/roles/:id - Delete role
+router.delete('/:id', 
+  requirePermission('role:delete', { application: 'system' }) as any,
+  RoleController.deleteRole as any
 );
 
-//get roles for multiple/single rolePermissionIds
-router.get(
-  '/get-multiple',
-  asyncHandler(RoleController.getRoles)
+// POST /api/roles/assign-to-user - Assign role to user
+router.post('/assign-to-user', 
+  requirePermission('role:assign', { application: 'system' }) as any,
+  RoleController.assignRoleToUser as any
 );
 
-
-// Delete a role
-router.delete(
-  '/:roleId',
-  requirePermission('role:delete', { application: 'system',allowSuperadmin:true }),
-  asyncHandler(RoleController.deleteRole)
+// POST /api/roles/check-permission - Check permission
+router.post('/check-permission', 
+  requirePermission('permission:check', { application: 'system' }) as any,
+  RoleController.checkPermission as any
 );
 
-// Check if user has specific permission
-router.post(
-  '/check-permission',
-  asyncHandler(RoleController.checkPermission)
+// GET /api/roles/users/:userId/permissions - Get user role permissions
+router.get('/users/:userId/permissions', 
+  requirePermission('user:permissions:read', { application: 'system' }) as any,
+  getUserRolePermissions as any
 );
-
-router.get('/users/:userId/role-permissions'
-  , asyncHandler(getUserRolePermissions));
 
 export default router;

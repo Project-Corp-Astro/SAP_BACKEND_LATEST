@@ -5,7 +5,7 @@
 
 import os from 'os';
 import { Request, Response, NextFunction } from 'express';
-import logger from '../../../../shared/utils/logger';
+import { logger } from './sharedModules';
 
 interface PerformanceMetrics {
   responseTime: {

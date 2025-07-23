@@ -15,7 +15,7 @@ NC='\033[0m' # No Color
 # Configuration
 PROJECT_ID="sap-project-466005"
 REGION="asia-south1"
-CLUSTER_NAME="sap-backend-test-cluster"
+CLUSTER_NAME="sap-backend-gke"
 SERVICE_NAME="user-service"
 IMAGE_TAG="asia-south1-docker.pkg.dev/${PROJECT_ID}/sap-microservices/${SERVICE_NAME}:latest"
 
@@ -55,9 +55,14 @@ fi
 echo -e "${YELLOW}🔐 Step 3: Getting GKE credentials...${NC}"
 gcloud container clusters get-credentials $CLUSTER_NAME --region=$REGION --project=$PROJECT_ID
 
+# Step 3.5: Ensure secrets are deployed
+echo -e "${YELLOW}� Step 3.5: Ensuring secrets are deployed...${NC}"
+cd ../deployment/microservices
+kubectl create namespace sap-microservices --dry-run=client -o yaml | kubectl apply -f -
+kubectl apply -f secrets.yaml
+
 # Step 4: Apply Deployment
 echo -e "${YELLOW}🚀 Step 4: Deploying to Kubernetes...${NC}"
-cd ../deployment/microservices
 kubectl apply -f user-service-deployment.yaml
 
 if [ $? -eq 0 ]; then

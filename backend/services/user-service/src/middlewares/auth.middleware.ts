@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { UserRole } from '@corp-astro/shared-types';
+import { UserRole } from '../interfaces/local-shared-types';
 import { JwtPayload } from '../interfaces/shared-types';
 
 // Create a simple logger for auth middleware
