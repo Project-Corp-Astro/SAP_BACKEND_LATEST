@@ -34,7 +34,6 @@ COPY shared/ ./shared/
 # Copy package files
 COPY services/user-service/package.json ./
 COPY services/user-service/tsconfig.json ./
-COPY services/user-service/tsconfig.service.json ./
 
 # Install dependencies
 RUN npm install --legacy-peer-deps --include=dev
