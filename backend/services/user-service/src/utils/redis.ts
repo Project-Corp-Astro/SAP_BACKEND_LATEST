@@ -1,42 +1,53 @@
-import type { Redis as IORedis } from 'ioredis';
-import { logger, redisManager, config } from './sharedModules';
+/**
+ * User Service Redis Implementation
+ * Uses the shared Redis manager with environment-aware switching
+ * Pattern consistent with auth-service and content-service
+ */
 
-// Extract utilities from redisManager
-const { RedisCache, createServiceRedisClient, SERVICE_DB_MAPPING } = redisManager;
+import { logger, redisManager } from './sharedModules';
 
+// Service-specific constants
 const SERVICE_NAME = 'user';
 
-// Create service-specific Redis clients
-export const defaultCache = new RedisCache(SERVICE_NAME, { keyPrefix: `${SERVICE_NAME}:default:` });
-export const userCache = new RedisCache(SERVICE_NAME, { keyPrefix: `${SERVICE_NAME}:users:` });
-export const rolePermissionCache = new RedisCache(SERVICE_NAME, { keyPrefix: `${SERVICE_NAME}:rolePermission:` });
+// Environment-aware Redis client factory
+const createRedisClient = (database: number = 2) => {
+  try {
+    return redisManager.createServiceRedisClient(SERVICE_NAME, { db: database });
+  } catch (error) {
+    logger.error('Failed to create Redis client:', error);
+    throw error;
+  }
+};
 
-const redisClient: any = createServiceRedisClient(SERVICE_NAME, {
-  host: config.get('redis.host', 'localhost'),
-  port: parseInt(config.get('redis.port', '6379')),
-  password: config.get('redis.password', '') || undefined,
-  db: SERVICE_DB_MAPPING[SERVICE_NAME] || 2,
-  retryStrategy: (times: number) => Math.min(times * 50, 2000),
-  connectTimeout: 3000,
-  enableReadyCheck: true,
-});
+// Main Redis client for general operations
+const mainRedisClient = createRedisClient(redisManager.SERVICE_DB_MAPPING[SERVICE_NAME] || 2);
 
-redisClient.on('error', (error) => {
+// Service-specific Redis cache instances using shared manager
+const defaultCache = new redisManager.RedisCache(SERVICE_NAME, { keyPrefix: `${SERVICE_NAME}:default:` });
+const userCache = new redisManager.RedisCache(SERVICE_NAME, { keyPrefix: `${SERVICE_NAME}:users:` });
+const rolePermissionCache = new redisManager.RedisCache(SERVICE_NAME, { keyPrefix: `${SERVICE_NAME}:rolePermission:` });
+
+// Redis event handling
+mainRedisClient.on('error', (error: Error) => {
   logger.error('Redis client error:', { error: error.message });
 });
-redisClient.on('connect', () => {
+
+mainRedisClient.on('connect', () => {
   logger.info('Redis client connected successfully');
 });
-redisClient.on('end', () => {
+
+mainRedisClient.on('end', () => {
   logger.warn('Redis client disconnected');
 });
-redisClient.on('reconnecting', () => {
+
+mainRedisClient.on('reconnecting', () => {
   logger.info('Redis client reconnecting...');
 });
 
-logger.info(`User service using Redis database ${SERVICE_DB_MAPPING[SERVICE_NAME] || 2}`);
+logger.info(`User service using Redis database ${redisManager.SERVICE_DB_MAPPING[SERVICE_NAME] || 2}`);
 
-interface RedisUtils {
+// Redis utility interface for type safety
+interface RedisUtilities {
   stats: {
     defaultCache: { hits: number; misses: number };
     userCache: { hits: number; misses: number };
@@ -56,7 +67,8 @@ interface RedisUtils {
   invalidateUserCache: (userId: string) => Promise<number>;
 }
 
-const redisUtils: RedisUtils = {
+// Redis utility implementations
+const redisUtils: RedisUtilities = {
   stats: {
     defaultCache: { hits: 0, misses: 0 },
     userCache: { hits: 0, misses: 0 },
@@ -85,21 +97,10 @@ const redisUtils: RedisUtils = {
       const success = await defaultCache.set(key, value, expiryInSeconds);
       return success ? 'OK' : 'ERROR';
     } catch (error: unknown) {
-      try {
-        const stringValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
-        if (expiryInSeconds) {
-          await redisClient.set(key, stringValue, 'EX', expiryInSeconds);
-        } else {
-          await redisClient.set(key, stringValue);
-        }
-        return 'OK';
-      } catch (fallbackError: unknown) {
-        logger.error(`Error setting Redis key ${key}:`, {
-          primaryError: error instanceof Error ? error.message : String(error),
-          fallbackError: fallbackError instanceof Error ? fallbackError.message : String(fallbackError)
-        });
-        return 'ERROR';
-      }
+      logger.error(`Error setting Redis key ${key}:`, {
+        error: error instanceof Error ? error.message : String(error)
+      });
+      return 'ERROR';
     }
   },
 
@@ -110,38 +111,21 @@ const redisUtils: RedisUtils = {
       return value as T;
     } catch (error: unknown) {
       this.stats.defaultCache.misses++;
-      try {
-        const value = await redisClient.get(key);
-        if (!value) return null;
-        try {
-          return JSON.parse(value) as T;
-        } catch {
-          return value as T;
-        }
-      } catch (fallbackError: unknown) {
-        logger.error(`Error getting Redis key ${key}:`, {
-          primaryError: error instanceof Error ? error.message : String(error),
-          fallbackError: fallbackError instanceof Error ? fallbackError.message : String(fallbackError)
-        });
-        return null;
-      }
+      logger.error(`Error getting Redis key ${key}:`, {
+        error: error instanceof Error ? error.message : String(error)
+      });
+      return null;
     }
   },
 
   async del(key: string): Promise<number> {
     try {
-      const success = await defaultCache.del(key);
-      return success ? 1 : 0;
+      return await defaultCache.del(key);
     } catch (error: unknown) {
-      try {
-        return await redisClient.del(key);
-      } catch (fallbackError: unknown) {
-        logger.error(`Error deleting Redis key ${key}:`, {
-          primaryError: error instanceof Error ? error.message : String(error),
-          fallbackError: fallbackError instanceof Error ? fallbackError.message : String(fallbackError)
-        });
-        return 0;
-      }
+      logger.error(`Error deleting Redis key ${key}:`, {
+        error: error instanceof Error ? error.message : String(error)
+      });
+      return 0;
     }
   },
 
@@ -150,15 +134,10 @@ const redisUtils: RedisUtils = {
       const exists = await defaultCache.exists(key);
       return exists ? 1 : 0;
     } catch (error: unknown) {
-      try {
-        return await redisClient.exists(key);
-      } catch (fallbackError: unknown) {
-        logger.error(`Error checking if Redis key ${key} exists:`, {
-          primaryError: error instanceof Error ? error.message : String(error),
-          fallbackError: fallbackError instanceof Error ? fallbackError.message : String(fallbackError)
-        });
-        return 0;
-      }
+      logger.error(`Error checking if Redis key ${key} exists:`, {
+        error: error instanceof Error ? error.message : String(error)
+      });
+      return 0;
     }
   },
 
@@ -170,6 +149,7 @@ const redisUtils: RedisUtils = {
     const errors: RedisCloseError[] = [];
     const closePromises: Promise<string>[] = [];
 
+    // Close all cache instances
     closePromises.push(
       defaultCache.getClient().quit().catch(error => {
         errors.push({ client: 'default', error: (error as Error).message });
@@ -189,8 +169,8 @@ const redisUtils: RedisUtils = {
       })
     );
     closePromises.push(
-      redisClient.quit().catch(error => {
-        errors.push({ client: 'legacy', error: (error as Error).message });
+      mainRedisClient.quit().catch(error => {
+        errors.push({ client: 'main', error: (error as Error).message });
         return '';
       })
     );
@@ -209,16 +189,10 @@ const redisUtils: RedisUtils = {
       const response = await defaultCache.getClient().ping();
       return response === 'PONG';
     } catch (error: unknown) {
-      try {
-        const response = await redisClient.ping();
-        return response === 'PONG';
-      } catch (fallbackError: unknown) {
-        logger.error('Error pinging Redis:', {
-          primaryError: error instanceof Error ? error.message : String(error),
-          fallbackError: fallbackError instanceof Error ? fallbackError.message : String(fallbackError)
-        });
-        return false;
-      }
+      logger.error('Error pinging Redis:', {
+        error: error instanceof Error ? error.message : String(error)
+      });
+      return false;
     }
   },
 
@@ -227,7 +201,9 @@ const redisUtils: RedisUtils = {
       const cacheKey = `${userId}:user`;
       return await userCache.set(cacheKey, userData, ttlSeconds);
     } catch (error: unknown) {
-      logger.error(`Error caching user ${userId}:`, { error: error instanceof Error ? error.message : String(error) });
+      logger.error(`Error caching user ${userId}:`, { 
+        error: error instanceof Error ? error.message : String(error) 
+      });
       return false;
     }
   },
@@ -240,7 +216,9 @@ const redisUtils: RedisUtils = {
       return value;
     } catch (error: unknown) {
       this.stats.userCache.misses++;
-      logger.warn(`Error getting cached user ${userId}:`, { error: error instanceof Error ? error.message : String(error) });
+      logger.warn(`Error getting cached user ${userId}:`, { 
+        error: error instanceof Error ? error.message : String(error) 
+      });
       return null;
     }
   },
@@ -250,7 +228,9 @@ const redisUtils: RedisUtils = {
       const cacheKey = `${rolePermissionId}:rolePermission`;
       return await rolePermissionCache.set(cacheKey, data, ttlSeconds);
     } catch (error: unknown) {
-      logger.error(`Error caching rolePermission ${rolePermissionId}:`, { error: error instanceof Error ? error.message : String(error) });
+      logger.error(`Error caching rolePermission ${rolePermissionId}:`, { 
+        error: error instanceof Error ? error.message : String(error) 
+      });
       return false;
     }
   },
@@ -263,30 +243,38 @@ const redisUtils: RedisUtils = {
       return value;
     } catch (error: unknown) {
       this.stats.rolePermissionCache.misses++;
-      logger.warn(`Error getting cached rolePermission ${rolePermissionId}:`, { error: error instanceof Error ? error.message : String(error) });
+      logger.warn(`Error getting cached rolePermission ${rolePermissionId}:`, { 
+        error: error instanceof Error ? error.message : String(error) 
+      });
       return null;
     }
   },
 
   async invalidateUserCache(userId: string): Promise<number> {
     try {
-      const userPattern = `${userId}:user`;
+      const userPattern = `*${userId}:user*`;
       const userKeys = await userCache.getClient().keys(userPattern);
       if (userKeys.length === 0) return 0;
       const deletions = await userCache.getClient().del(...userKeys);
       return deletions;
     } catch (error: unknown) {
-      logger.warn(`Failed to invalidate cache for user ${userId}:`, { error: error instanceof Error ? error.message : String(error) });
+      logger.warn(`Failed to invalidate cache for user ${userId}:`, { 
+        error: error instanceof Error ? error.message : String(error) 
+      });
       return 0;
     }
   }
 };
 
+// Export service instances and utilities following auth/content service pattern
+export const redisClient = mainRedisClient;
+export { defaultCache, userCache, rolePermissionCache, redisUtils };
+
+// Default export matching the pattern
 export default {
-  redisClient,
+  redisClient: mainRedisClient,
   redisUtils,
   defaultCache,
   userCache,
-  rolePermissionCache,
-  
+  rolePermissionCache
 };
