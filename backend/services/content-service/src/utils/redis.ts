@@ -219,38 +219,77 @@ const redisUtils: RedisUtils = {
     const closePromises: Promise<string>[] = [];
     
     closePromises.push(
-      contentCache.getClient().quit().catch((error: any) => {
-        errors.push({ client: 'content', error: (error as Error).message });
-        return '';
-      })
+      (async () => {
+        try {
+          const client = contentCache.getClient();
+          if (client && typeof client.quit === 'function') {
+            return await client.quit();
+          }
+          return 'OK';
+        } catch (error: any) {
+          errors.push({ client: 'content', error: (error as Error).message });
+          return '';
+        }
+      })()
     );
     
     closePromises.push(
-      mediaCache.getClient().quit().catch((error: any) => {
-        errors.push({ client: 'media', error: (error as Error).message });
-        return '';
-      })
+      (async () => {
+        try {
+          const client = mediaCache.getClient();
+          if (client && typeof client.quit === 'function') {
+            return await client.quit();
+          }
+          return 'OK';
+        } catch (error: any) {
+          errors.push({ client: 'media', error: (error as Error).message });
+          return '';
+        }
+      })()
     );
     
     closePromises.push(
-      videoCache.getClient().quit().catch((error: any) => {
-        errors.push({ client: 'video', error: (error as Error).message });
-        return '';
-      })
+      (async () => {
+        try {
+          const client = videoCache.getClient();
+          if (client && typeof client.quit === 'function') {
+            return await client.quit();
+          }
+          return 'OK';
+        } catch (error: any) {
+          errors.push({ client: 'video', error: (error as Error).message });
+          return '';
+        }
+      })()
     );
     
     closePromises.push(
-      categoryCache.getClient().quit().catch((error: any) => {
-        errors.push({ client: 'category', error: (error as Error).message });
-        return '';
-      })
+      (async () => {
+        try {
+          const client = categoryCache.getClient();
+          if (client && typeof client.quit === 'function') {
+            return await client.quit();
+          }
+          return 'OK';
+        } catch (error: any) {
+          errors.push({ client: 'category', error: (error as Error).message });
+          return '';
+        }
+      })()
     );
     
     closePromises.push(
-      redisClient.quit().catch(error => {
-        errors.push({ client: 'legacy', error: (error as Error).message });
-        return '';
-      })
+      (async () => {
+        try {
+          if (redisClient && typeof redisClient.quit === 'function') {
+            return await redisClient.quit();
+          }
+          return 'OK';
+        } catch (error: any) {
+          errors.push({ client: 'legacy', error: (error as Error).message });
+          return '';
+        }
+      })()
     );
     
     await Promise.all(closePromises);

@@ -1,14 +1,65 @@
 /**
- * Environment-aware shared module imports
+ * Environment-aware shared module imports for content-service
  * Provides a consistent interface for shared utilities across environments
  */
 
-import { ModuleResolver } from './moduleResolver';
+// Simple environment detection
+const isDockerEnvironment = (): boolean => {
+  console.log('=== Content Service Environment Detection Debug ===');
+  console.log('process.cwd():', process.cwd());
+  console.log('NODE_ENV:', process.env.NODE_ENV);
+  console.log('KUBERNETES_SERVICE_HOST:', process.env.KUBERNETES_SERVICE_HOST);
+  console.log('MONGO_URI contains mongodb+srv:', process.env.MONGODB_URL?.includes('mongodb+srv://'));
+  console.log('REDIS_URL:', process.env.REDIS_URL);
+  
+  // Check if we're in Docker container
+  if (process.cwd() === '/app') {
+    console.log('✅ Docker detected: process.cwd() === /app');
+    return true;
+  }
+  
+  // Check for Docker-specific environment variables
+  if (process.env.DOCKER_CONTAINER === 'true') {
+    console.log('✅ Docker detected: DOCKER_CONTAINER === true');
+    return true;
+  }
+  
+  // Check for production environment
+  if (process.env.NODE_ENV === 'production') {
+    console.log('✅ Production detected: NODE_ENV === production');
+    return true;
+  }
+  
+  // Check if we're in a typical Docker working directory
+  if (process.cwd().startsWith('/app')) {
+    console.log('✅ Docker detected: process.cwd() starts with /app');
+    return true;
+  }
+  
+  // Check for Kubernetes environment variables
+  if (process.env.KUBERNETES_SERVICE_HOST) {
+    console.log('✅ Kubernetes detected: KUBERNETES_SERVICE_HOST exists');
+    return true;
+  }
+  if (process.env.KUBERNETES_PORT) {
+    console.log('✅ Kubernetes detected: KUBERNETES_PORT exists');
+    return true;
+  }
+  
+  // Check for production MongoDB (indicates production environment)
+  if (process.env.MONGODB_URL && process.env.MONGODB_URL.includes('mongodb+srv://')) {
+    console.log('✅ Production detected: MongoDB Atlas URI found');
+    return true;
+  }
+  
+  console.log('❌ Local environment detected');
+  return false;
+};
 
 // Logger
 let logger: any;
 try {
-  if (process.env.NODE_ENV === 'production' || process.cwd() === '/app') {
+  if (isDockerEnvironment()) {
     // In Docker/production
     logger = require('../../../shared/utils/logger');
   } else {
@@ -33,9 +84,15 @@ try {
 // Redis Manager
 let redisManager: any;
 try {
-  if (process.env.NODE_ENV === 'production' || process.cwd() === '/app') {
+  const isDocker = isDockerEnvironment();
+  console.log(`=== Content Service Redis Manager Loading: isDockerEnvironment = ${isDocker} ===`);
+  
+  if (isDocker) {
+    console.log('🔄 Attempting to load shared Redis manager...');
     redisManager = require('../../../shared/utils/redis-manager');
+    console.log('✅ Shared Redis manager loaded successfully');
   } else {
+    console.log('🔄 Using mock Redis manager for local development');
     // Mock Redis manager for local development
     redisManager = {
       getRedisHealthMetrics: async () => ({
@@ -52,13 +109,18 @@ try {
         del: async () => 0,
         get: async () => null,
         set: async () => 'OK',
-        exists: async () => 0
+        exists: async () => 0,
+        on: (event: string, listener: (...args: any[]) => void) => {
+          // Mock event listener
+          console.log(`Redis event listener registered for: ${event}`);
+        }
       }),
       RedisCache: class MockRedisCache {
-        async get() { return null; }
-        async set() { return true; }
-        async del() { return true; }
-        async exists() { return false; }
+        constructor(serviceName?: string, options?: any) {}
+        async get(key: string): Promise<any> { return null; }
+        async set(key: string, value: any, ttl?: number): Promise<boolean> { return true; }
+        async del(key: string): Promise<boolean> { return true; }
+        async exists(key: string): Promise<boolean> { return false; }
         getClient() { 
           return {
             ping: async () => 'PONG',
