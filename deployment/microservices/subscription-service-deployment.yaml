@@ -8,7 +8,7 @@ metadata:
     version: v1
     component: backend
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: subscription-service
@@ -170,7 +170,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: subscription-service
-  minReplicas: 2
+  minReplicas: 1
   maxReplicas: 10
   metrics:
   - type: Resource
