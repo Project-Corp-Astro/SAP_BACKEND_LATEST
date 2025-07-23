@@ -18,13 +18,13 @@ spec:
     spec:
       containers:
       - name: api-gateway
-        image: ghcr.io/company/api-gateway:latest
+        image: gcr.io/sap-project-466005/sap-api-gateway:latest
         ports:
-        - containerPort: 3000
+        - containerPort: 5001
           name: http
         env:
         - name: PORT
-          value: "3000"
+          value: "5001"
         - name: AUTH_SERVICE_URL
           value: "http://auth-service.sap-microservices.svc.cluster.local:3001"
         - name: USER_SERVICE_URL
@@ -45,13 +45,13 @@ spec:
         livenessProbe:
           httpGet:
             path: /health
-            port: 3000
+            port: 5001
           initialDelaySeconds: 30
           periodSeconds: 10
         readinessProbe:
           httpGet:
             path: /ready
-            port: 3000
+            port: 5001
           initialDelaySeconds: 5
           periodSeconds: 5
 ---
@@ -66,7 +66,7 @@ spec:
   type: LoadBalancer
   ports:
   - port: 80
-    targetPort: 3000
+    targetPort: 5001
     protocol: TCP
     name: http
   selector:
