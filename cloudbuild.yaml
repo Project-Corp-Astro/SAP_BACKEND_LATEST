@@ -1,0 +1,259 @@
+options:
+  logging: CLOUD_LOGGING_ONLY
+  substitution_option: 'ALLOW_LOOSE'
+  machineType: 'E2_HIGHCPU_8'
+
+# Define substitutions for reusability
+substitutions:
+  _REGISTRY: 'asia-south1-docker.pkg.dev'
+  _PROJECT_ID: 'sap-project-466005'
+  _REPO: 'sap-microservices'
+  _CLUSTER_NAME: 'sap-backend-cluster' 
+  _CLUSTER_LOCATION: 'asia-south1-a'
+  _NAMESPACE: 'sap-microservices'
+
+steps:
+  # Step 1: Detect changes using git diff
+  - name: 'gcr.io/cloud-builders/git'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "🔍 Detecting changes..."
+        # Create change detection files
+        if [ "$BRANCH_NAME" = "main" ] && [ -n "$_PR_NUMBER" ]; then
+          # For PRs, compare with main
+          git fetch origin main
+          git diff --name-only origin/main HEAD > /workspace/changed_files.txt
+        else
+          # For direct commits, compare with previous commit
+          git diff --name-only HEAD~1 HEAD > /workspace/changed_files.txt
+        fi
+        
+        # Check each service
+        if grep -q "^backend/api-gateway" /workspace/changed_files.txt; then
+          echo "api-gateway" > /workspace/build_api_gateway.txt
+          echo "✅ API Gateway changes detected"
+        fi
+        
+        if grep -q "^backend/services/auth-service" /workspace/changed_files.txt; then
+          echo "auth-service" > /workspace/build_auth_service.txt
+          echo "✅ Auth Service changes detected"
+        fi
+        
+        if grep -q "^backend/services/user-service" /workspace/changed_files.txt; then
+          echo "user-service" > /workspace/build_user_service.txt
+          echo "✅ User Service changes detected"
+        fi
+        
+        if grep -q "^backend/services/content-service" /workspace/changed_files.txt; then
+          echo "content-service" > /workspace/build_content_service.txt
+          echo "✅ Content Service changes detected"
+        fi
+        
+        if grep -q "^backend/services/subscription-service" /workspace/changed_files.txt; then
+          echo "subscription-service" > /workspace/build_subscription_service.txt
+          echo "✅ Subscription Service changes detected"
+        fi
+        
+        echo "📋 Changed files:"
+        cat /workspace/changed_files.txt
+    id: 'detect-changes'
+
+  # Step 2: Build API Gateway (conditional)
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        if [ -f /workspace/build_api_gateway.txt ]; then
+          echo "🔨 Building API Gateway..."
+          cd backend/api-gateway
+          docker build -t ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/api-gateway:${COMMIT_SHA} .
+          docker tag ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/api-gateway:${COMMIT_SHA} ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/api-gateway:latest
+          docker push ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/api-gateway:${COMMIT_SHA}
+          docker push ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/api-gateway:latest
+          echo "✅ API Gateway built and pushed"
+          echo "api-gateway" > /workspace/deploy_api_gateway.txt
+        else
+          echo "⏭️ No changes in API Gateway, skipping build"
+        fi
+    waitFor: ['detect-changes']
+    id: 'build-api-gateway'
+
+  # Step 3: Build Auth Service (conditional)
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        if [ -f /workspace/build_auth_service.txt ]; then
+          echo "🔨 Building Auth Service..."
+          cd backend/services/auth-service
+          docker build -t ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/auth-service:${COMMIT_SHA} .
+          docker tag ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/auth-service:${COMMIT_SHA} ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/auth-service:latest
+          docker push ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/auth-service:${COMMIT_SHA}
+          docker push ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/auth-service:latest
+          echo "✅ Auth Service built and pushed"
+          echo "auth-service" > /workspace/deploy_auth_service.txt
+        else
+          echo "⏭️ No changes in Auth Service, skipping build"
+        fi
+    waitFor: ['detect-changes']
+    id: 'build-auth-service'
+
+  # Step 4: Build User Service (conditional)
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        if [ -f /workspace/build_user_service.txt ]; then
+          echo "🔨 Building User Service..."
+          cd backend/services/user-service
+          docker build -t ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/user-service:${COMMIT_SHA} .
+          docker tag ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/user-service:${COMMIT_SHA} ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/user-service:latest
+          docker push ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/user-service:${COMMIT_SHA}
+          docker push ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/user-service:latest
+          echo "✅ User Service built and pushed"
+          echo "user-service" > /workspace/deploy_user_service.txt
+        else
+          echo "⏭️ No changes in User Service, skipping build"
+        fi
+    waitFor: ['detect-changes']
+    id: 'build-user-service'
+
+  # Step 5: Build Content Service (conditional)
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        if [ -f /workspace/build_content_service.txt ]; then
+          echo "🔨 Building Content Service..."
+          cd backend/services/content-service
+          docker build -t ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/content-service:${COMMIT_SHA} .
+          docker tag ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/content-service:${COMMIT_SHA} ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/content-service:latest
+          docker push ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/content-service:${COMMIT_SHA}
+          docker push ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/content-service:latest
+          echo "✅ Content Service built and pushed"
+          echo "content-service" > /workspace/deploy_content_service.txt
+        else
+          echo "⏭️ No changes in Content Service, skipping build"
+        fi
+    waitFor: ['detect-changes']
+    id: 'build-content-service'
+
+  # Step 6: Build Subscription Service (conditional)
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        if [ -f /workspace/build_subscription_service.txt ]; then
+          echo "🔨 Building Subscription Service..."
+          cd backend/services/subscription-service
+          docker build -t ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/subscription-service:${COMMIT_SHA} .
+          docker tag ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/subscription-service:${COMMIT_SHA} ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/subscription-service:latest
+          docker push ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/subscription-service:${COMMIT_SHA}
+          docker push ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/subscription-service:latest
+          echo "✅ Subscription Service built and pushed"
+          echo "subscription-service" > /workspace/deploy_subscription_service.txt
+        else
+          echo "⏭️ No changes in Subscription Service, skipping build"
+        fi
+    waitFor: ['detect-changes']
+    id: 'build-subscription-service'
+
+  # Step 7: Deploy to GKE (conditional deployments)
+  - name: 'gcr.io/cloud-builders/gke-deploy'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        # Get GKE credentials
+        gcloud container clusters get-credentials ${_CLUSTER_NAME} --location=${_CLUSTER_LOCATION}
+        
+        echo "🚀 Starting deployment process..."
+        
+        # Deploy API Gateway if built
+        if [ -f /workspace/deploy_api_gateway.txt ]; then
+          echo "🚀 Deploying API Gateway..."
+          kubectl set image deployment/api-gateway api-gateway=${_REGISTRY}/${_PROJECT_ID}/${_REPO}/api-gateway:${COMMIT_SHA} -n ${_NAMESPACE}
+          kubectl rollout status deployment/api-gateway -n ${_NAMESPACE} --timeout=300s
+          echo "✅ API Gateway deployed successfully"
+        fi
+        
+        # Deploy Auth Service if built
+        if [ -f /workspace/deploy_auth_service.txt ]; then
+          echo "🚀 Deploying Auth Service..."
+          kubectl set image deployment/auth-service auth-service=${_REGISTRY}/${_PROJECT_ID}/${_REPO}/auth-service:${COMMIT_SHA} -n ${_NAMESPACE}
+          kubectl rollout status deployment/auth-service -n ${_NAMESPACE} --timeout=300s
+          echo "✅ Auth Service deployed successfully"
+        fi
+        
+        # Deploy User Service if built
+        if [ -f /workspace/deploy_user_service.txt ]; then
+          echo "🚀 Deploying User Service..."
+          kubectl set image deployment/user-service user-service=${_REGISTRY}/${_PROJECT_ID}/${_REPO}/user-service:${COMMIT_SHA} -n ${_NAMESPACE}
+          kubectl rollout status deployment/user-service -n ${_NAMESPACE} --timeout=300s
+          echo "✅ User Service deployed successfully"
+        fi
+        
+        # Deploy Content Service if built
+        if [ -f /workspace/deploy_content_service.txt ]; then
+          echo "🚀 Deploying Content Service..."
+          kubectl set image deployment/content-service content-service=${_REGISTRY}/${_PROJECT_ID}/${_REPO}/content-service:${COMMIT_SHA} -n ${_NAMESPACE}
+          kubectl rollout status deployment/content-service -n ${_NAMESPACE} --timeout=300s
+          echo "✅ Content Service deployed successfully"
+        fi
+        
+        # Deploy Subscription Service if built
+        if [ -f /workspace/deploy_subscription_service.txt ]; then
+          echo "🚀 Deploying Subscription Service..."
+          kubectl set image deployment/subscription-service subscription-service=${_REGISTRY}/${_PROJECT_ID}/${_REPO}/subscription-service:${COMMIT_SHA} -n ${_NAMESPACE}
+          kubectl rollout status deployment/subscription-service -n ${_NAMESPACE} --timeout=300s
+          echo "✅ Subscription Service deployed successfully"
+        fi
+        
+        echo "🎉 Deployment process completed!"
+    waitFor: ['build-api-gateway', 'build-auth-service', 'build-user-service', 'build-content-service', 'build-subscription-service']
+    id: 'deploy-services'
+
+  # Step 8: Verification and health checks
+  - name: 'gcr.io/cloud-builders/kubectl'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "🔍 Verifying deployment status..."
+        
+        # Get cluster credentials
+        gcloud container clusters get-credentials ${_CLUSTER_NAME} --location=${_CLUSTER_LOCATION}
+        
+        # Show pod status
+        echo "📊 Pod Status:"
+        kubectl get pods -n ${_NAMESPACE} -o wide
+        
+        # Show service status
+        echo "🌐 Service Status:"
+        kubectl get services -n ${_NAMESPACE}
+        
+        # Check API Gateway health
+        echo "🏥 Health Check:"
+        if kubectl get service api-gateway -n ${_NAMESPACE} &> /dev/null; then
+          API_GATEWAY_IP=$(kubectl get service api-gateway -n ${_NAMESPACE} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          if [ -n "$API_GATEWAY_IP" ]; then
+            echo "API Gateway IP: $API_GATEWAY_IP"
+            curl -f "http://$API_GATEWAY_IP/health" || echo "Health check failed"
+          fi
+        fi
+        
+        echo "✅ Verification completed!"
+    env:
+      - 'CLOUDSDK_COMPUTE_ZONE=${_CLUSTER_LOCATION}'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=${_CLUSTER_NAME}'
+    waitFor: ['deploy-services']
+    id: 'verify-deployment'
+
+timeout: 1800s  # 30 minutes timeout
