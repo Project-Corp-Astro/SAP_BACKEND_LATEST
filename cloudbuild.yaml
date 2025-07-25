@@ -21,7 +21,7 @@ steps:
       - |
         echo "🔍 Detecting changes..."
         # Create change detection files
-        if [ "$BRANCH_NAME" = "main" ] && [ -n "$_PR_NUMBER" ]; then
+        if [ "$$BRANCH_NAME" = "main" ] && [ -n "$$_PR_NUMBER" ]; then
           # For PRs, compare with main
           git fetch origin main
           git diff --name-only origin/main HEAD > /workspace/changed_files.txt
