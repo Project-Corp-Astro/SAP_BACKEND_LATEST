@@ -242,10 +242,10 @@ steps:
         # Check API Gateway health
         echo "🏥 Health Check:"
         if kubectl get service api-gateway -n ${_NAMESPACE} &> /dev/null; then
-          API_GATEWAY_IP=$(kubectl get service api-gateway -n ${_NAMESPACE} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-          if [ -n "$API_GATEWAY_IP" ]; then
-            echo "API Gateway IP: $API_GATEWAY_IP"
-            curl -f "http://$API_GATEWAY_IP/health" || echo "Health check failed"
+          API_GATEWAY_IP=$$(kubectl get service api-gateway -n ${_NAMESPACE} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          if [ -n "$$API_GATEWAY_IP" ]; then
+            echo "API Gateway IP: $$API_GATEWAY_IP"
+            curl -f "http://$$API_GATEWAY_IP/health" || echo "Health check failed"
           fi
         fi
         
