@@ -26,18 +26,8 @@ steps:
           git fetch origin main
           git diff --name-only origin/main HEAD > /workspace/changed_files.txt
         else
-          # For direct commits, compare with previous commit (if exists)
-          if git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
-            git diff --name-only HEAD~1 HEAD > /workspace/changed_files.txt
-          else
-            # If no previous commit, build all services (initial commit)
-            echo "⚠️ No previous commit found, building all services"
-            echo "backend/api-gateway/" > /workspace/changed_files.txt
-            echo "backend/services/auth-service/" >> /workspace/changed_files.txt
-            echo "backend/services/user-service/" >> /workspace/changed_files.txt
-            echo "backend/services/content-service/" >> /workspace/changed_files.txt
-            echo "backend/services/subscription-service/" >> /workspace/changed_files.txt
-          fi
+          # For direct commits, compare with previous commit
+          git diff --name-only HEAD~1 HEAD > /workspace/changed_files.txt
         fi
         
         # Check each service
@@ -61,7 +51,7 @@ steps:
           echo "✅ Content Service changes detected"
         fi
         
-        if grep -q "^backend/services/subscription-service" /workspace/changed_files.txt; then
+        if grep -q "^backend/services/subscription-management-service" /workspace/changed_files.txt; then
           echo "subscription-service" > /workspace/build_subscription_service.txt
           echo "✅ Subscription Service changes detected"
         fi
@@ -79,10 +69,10 @@ steps:
         if [ -f /workspace/build_api_gateway.txt ]; then
           echo "🔨 Building API Gateway..."
           cd backend/api-gateway
-          docker build -t ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/api-gateway:${COMMIT_SHA} .
-          docker tag ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/api-gateway:${COMMIT_SHA} ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/api-gateway:latest
-          docker push ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/api-gateway:${COMMIT_SHA}
-          docker push ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/api-gateway:latest
+          docker build -t ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/sap-api-gateway:${COMMIT_SHA} .
+          docker tag ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/sap-api-gateway:${COMMIT_SHA} ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/sap-api-gateway:latest
+          docker push ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/sap-api-gateway:${COMMIT_SHA}
+          docker push ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/sap-api-gateway:latest
           echo "✅ API Gateway built and pushed"
           echo "api-gateway" > /workspace/deploy_api_gateway.txt
         else
@@ -162,7 +152,7 @@ steps:
       - |
         if [ -f /workspace/build_subscription_service.txt ]; then
           echo "🔨 Building Subscription Service..."
-          cd backend/services/subscription-service
+          cd backend/services/subscription-management-service
           docker build -t ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/subscription-service:${COMMIT_SHA} .
           docker tag ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/subscription-service:${COMMIT_SHA} ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/subscription-service:latest
           docker push ${_REGISTRY}/${_PROJECT_ID}/${_REPO}/subscription-service:${COMMIT_SHA}
@@ -189,7 +179,7 @@ steps:
         # Deploy API Gateway if built
         if [ -f /workspace/deploy_api_gateway.txt ]; then
           echo "🚀 Deploying API Gateway..."
-          kubectl set image deployment/api-gateway api-gateway=${_REGISTRY}/${_PROJECT_ID}/${_REPO}/api-gateway:${COMMIT_SHA} -n ${_NAMESPACE}
+          kubectl set image deployment/api-gateway api-gateway=${_REGISTRY}/${_PROJECT_ID}/${_REPO}/sap-api-gateway:${COMMIT_SHA} -n ${_NAMESPACE}
           kubectl rollout status deployment/api-gateway -n ${_NAMESPACE} --timeout=300s
           echo "✅ API Gateway deployed successfully"
         fi

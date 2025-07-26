@@ -6,7 +6,7 @@ metadata:
     app: api-gateway
     version: v1
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: api-gateway
@@ -18,21 +18,21 @@ spec:
     spec:
       containers:
       - name: api-gateway
-        image: gcr.io/sap-project-466005/sap-api-gateway:latest
+        image: ghcr.io/company/api-gateway:latest
         ports:
-        - containerPort: 5001
+        - containerPort: 3000
           name: http
         env:
         - name: PORT
-          value: "5001"
+          value: "3000"
         - name: AUTH_SERVICE_URL
-          value: "http://auth-service.sap-microservices.svc.cluster.local:3001"
+          value: "http://auth-service:3001"
         - name: USER_SERVICE_URL
-          value: "http://user-service.sap-microservices.svc.cluster.local:3002"
+          value: "http://user-service:3002"
         - name: CONTENT_SERVICE_URL
-          value: "http://content-service.sap-microservices.svc.cluster.local:3005"
+          value: "http://content-service:3003"
         - name: SUBSCRIPTION_SERVICE_URL
-          value: "http://subscription-service.sap-microservices.svc.cluster.local:3003"
+          value: "http://subscription-service:3004"
         - name: REDIS_URL
           value: "redis://redis-manager:6379"
         resources:
@@ -45,23 +45,15 @@ spec:
         livenessProbe:
           httpGet:
             path: /health
-            port: 5001
+            port: 3000
           initialDelaySeconds: 30
           periodSeconds: 10
         readinessProbe:
           httpGet:
             path: /ready
-            port: 5001
+            port: 3000
           initialDelaySeconds: 5
           periodSeconds: 5
-        volumeMounts:
-        - name: routes-config
-          mountPath: /app/config
-          readOnly: true
-      volumes:
-      - name: routes-config
-        configMap:
-          name: api-gateway-routes
 ---
 apiVersion: v1
 kind: Service
@@ -69,13 +61,39 @@ metadata:
   name: api-gateway
   labels:
     app: api-gateway
-    component: gateway
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   ports:
-  - port: 80
-    targetPort: 5001
+  - port: 3000
+    targetPort: 3000
     protocol: TCP
     name: http
   selector:
     app: api-gateway
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-gateway
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - api.company.com
+    secretName: api-gateway-tls
+  rules:
+  - host: api.company.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 3000

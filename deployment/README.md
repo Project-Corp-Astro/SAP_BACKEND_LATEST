@@ -158,4 +158,41 @@ argocd app logs <app-name>
 **Deployment Status**: Production Ready  
 **ArgoCD Version**: 2.8+  
 **GitOps Model**: Fully Implemented  
-**Multi-Environment**: Supported
+**Multi-Environment**: Supported  
+**CI/CD**: Cloud Build Automation Enabled
+
+## 🔄 **CI/CD Automation**
+
+### **Automated Build & Deploy Process**
+- **Trigger**: Push to `main` branch
+- **Detection**: Smart change detection (only builds modified services)
+- **Registry**: Google Artifact Registry (`asia-south1-docker.pkg.dev`)
+- **Platform**: Google Kubernetes Engine (GKE)
+- **Monitoring**: Automated health checks and verification
+
+### **Setup CI/CD Automation**
+```bash
+# Run the setup script (one-time setup)
+chmod +x setup-cicd.sh
+./setup-cicd.sh
+
+# Monitor deployments
+./monitor-deployment.sh
+
+# Rollback if needed
+./rollback-deployment.sh <service-name>
+```
+
+### **Automated Services**
+- ✅ **API Gateway**: Automatic routing updates
+- ✅ **Auth Service**: Authentication system updates
+- ✅ **User Service**: User management updates (including RBAC)
+- ✅ **Content Service**: Content management updates
+- ✅ **Subscription Service**: Billing system updates
+
+### **Build Process**
+1. **Change Detection**: Identifies modified services
+2. **Parallel Building**: Builds only changed services
+3. **Image Registry**: Pushes to Artifact Registry
+4. **Rolling Deployment**: Zero-downtime updates to GKE
+5. **Health Verification**: Automated health checks post-deployment
