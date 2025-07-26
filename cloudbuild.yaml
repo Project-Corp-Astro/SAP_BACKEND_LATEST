@@ -5,7 +5,7 @@ options:
 
 # Define substitutions for reusability
 substitutions:
-  _REGISTRY: 'asia-south1-docker.pkg.dev'
+  _REGISTRY: 'us-central1-docker.pkg.dev'
   _PROJECT_ID: 'sap-project-466005'
   _REPO: 'sap-microservices'
   _CLUSTER_NAME: 'sap-backend-cluster' 
