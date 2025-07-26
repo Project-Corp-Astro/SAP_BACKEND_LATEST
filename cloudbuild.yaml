@@ -5,11 +5,11 @@ options:
 
 # Define substitutions for reusability
 substitutions:
-  _REGISTRY: 'us-central1-docker.pkg.dev'
+  _REGISTRY: 'asia-south1-docker.pkg.dev'
   _PROJECT_ID: 'sap-project-466005'
   _REPO: 'sap-microservices'
-  _CLUSTER_NAME: 'sap-backend-cluster' 
-  _CLUSTER_LOCATION: 'asia-south1-a'
+  _CLUSTER_NAME: 'sap-backend-test-cluster' 
+  _CLUSTER_LOCATION: 'asia-south1'
   _NAMESPACE: 'sap-microservices'
 
 steps:
@@ -26,8 +26,18 @@ steps:
           git fetch origin main
           git diff --name-only origin/main HEAD > /workspace/changed_files.txt
         else
-          # For direct commits, compare with previous commit
-          git diff --name-only HEAD~1 HEAD > /workspace/changed_files.txt
+          # For direct commits, compare with previous commit (if exists)
+          if git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
+            git diff --name-only HEAD~1 HEAD > /workspace/changed_files.txt
+          else
+            # If no previous commit, build all services (initial commit)
+            echo "⚠️ No previous commit found, building all services"
+            echo "backend/api-gateway/" > /workspace/changed_files.txt
+            echo "backend/services/auth-service/" >> /workspace/changed_files.txt
+            echo "backend/services/user-service/" >> /workspace/changed_files.txt
+            echo "backend/services/content-service/" >> /workspace/changed_files.txt
+            echo "backend/services/subscription-service/" >> /workspace/changed_files.txt
+          fi
         fi
         
         # Check each service
