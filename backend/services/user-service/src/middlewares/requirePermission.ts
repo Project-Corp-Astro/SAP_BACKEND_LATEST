@@ -19,10 +19,9 @@ class UnauthorizedError extends Error {
 }
 
 // Import proper user interface instead of defining locally
-import { IUserDocument } from '../models/User.model';
 
 // Define AuthUser with all required properties
-interface AuthUser extends Partial<IUserDocument> {
+interface AuthUser  {
   _id?: string;
   id?: string;
   email: string;

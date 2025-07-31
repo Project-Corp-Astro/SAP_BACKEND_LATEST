@@ -59,44 +59,13 @@ export function trackResponseTime(req: Request, res: Response, next: NextFunctio
 }
 
 /**
- * Middleware to track database query performance
- * This middleware should be applied to routes that make database queries
+ * Placeholder for database performance tracking
+ * This is kept for compatibility but doesn't do anything
+ * since we're not using Mongoose
  */
-export function trackDatabasePerformance(req: Request, res: Response, next: NextFunction): void {
-  // Store the original mongoose exec function
-  const mongoose = require('mongoose');
-  const originalExec = mongoose.Query.prototype.exec;
-  
-  // Override the exec function to track query time
-  mongoose.Query.prototype.exec = async function(...args: any[]) {
-    const startTime = Date.now();
-    const collection = this.model.collection.name;
-    const operation = this.op;
-    
-    try {
-      // Execute the original query
-      const result = await originalExec.apply(this, args);
-      
-      // Track query time
-      const endTime = Date.now();
-      performanceMonitor.trackDbQuery(startTime, endTime, operation, collection);
-      
-      return result;
-    } catch (error) {
-      // Still track query time even if it fails
-      const endTime = Date.now();
-      performanceMonitor.trackDbQuery(startTime, endTime, operation, collection);
-      
-      throw error;
-    }
-  };
-  
+export function trackDatabasePerformance(_req: Request, _res: Response, next: NextFunction): void {
+  // No-op implementation since we're not using Mongoose
   next();
-  
-  // Restore original exec function after request is complete
-  res.on('finish', () => {
-    mongoose.Query.prototype.exec = originalExec;
-  });
 }
 
 export default {

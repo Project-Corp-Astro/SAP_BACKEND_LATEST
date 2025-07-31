@@ -12,7 +12,7 @@ const logger = {
 };
 
 // JWT secret key - should be stored in environment variables in production
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET || '3e4c77c0f78f1aaabf3b15f8ce5fa4cc9c8040b2f9ff3732c4ef3a07f49128b5b3e6f59b19fce67c622d5c9edb9b0ffacfea64f63164eaa6ac59e8913e2dc962';
 
 // Note: Express interface extension is now in src/types/express.d.ts
 

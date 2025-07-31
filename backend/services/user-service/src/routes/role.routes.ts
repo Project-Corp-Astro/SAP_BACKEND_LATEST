@@ -40,13 +40,13 @@ router.post('/assign-to-user',
 
 // POST /api/roles/check-permission - Check permission
 router.post('/check-permission', 
-  requirePermission('permission:check', { application: 'system' }) as any,
+ 
   RoleController.checkPermission as any
 );
 
 // GET /api/roles/users/:userId/permissions - Get user role permissions
-router.get('/users/:userId/permissions', 
-  requirePermission('user:permissions:read', { application: 'system' }) as any,
+router.get('/:userId/role-permissions', 
+  // requirePermission('user:read', { application: 'system',allowSuperadmin:true }) as any,
   getUserRolePermissions as any
 );
 

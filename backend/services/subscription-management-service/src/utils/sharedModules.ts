@@ -42,32 +42,149 @@ try {
 let redisManager: any;
 try {
   if (ModuleResolver.isDockerEnvironment()) {
-    redisManager = require('../../../../shared/utils/redis-manager');
+    redisManager = require('../../../../shared/redis');
   } else {
-    // Mock Redis manager for local development
+    // Use ioredis for local development
+    const Redis = require('ioredis');
+    
+    // Create a real Redis client
+    const createRedisClient = (options: any = {}) => {
+      const client = new Redis({
+        host: process.env.REDIS_HOST || '127.0.0.1',
+        port: parseInt(process.env.REDIS_PORT || '6379', 10),
+        db: options.db || 0,
+        password: process.env.REDIS_PASSWORD || undefined,
+        retryStrategy: (times: number) => {
+          const delay = Math.min(times * 50, 2000);
+          logger.warn(`Redis reconnecting in ${delay}ms`);
+          return delay;
+        },
+        maxRetriesPerRequest: null,
+        enableReadyCheck: true,
+        connectTimeout: 10000,
+        ...options
+      });
+
+      // Add event listeners
+      client.on('connect', () => {
+        logger.info('Redis client connected successfully');
+      });
+
+      client.on('ready', () => {
+        logger.info('Redis client ready');
+      });
+
+      client.on('error', (err: Error) => {
+        logger.error('Redis client error:', { error: err.message });
+      });
+
+      return client;
+    };
+
     redisManager = {
       getRedisHealthMetrics: async () => ({
-        uptime: '0',
-        connectedClients: '0',
+        status: 'connected',
+        connectedClients: '1',
         usedMemory: '0',
         totalKeys: 0,
         hitRate: '0%'
       }),
-      createServiceRedisClient: () => null,
-      RedisCache: class MockRedisCache {
-        constructor(serviceName?: string, options?: any) {}
-        async get(key: string): Promise<any> { return null; }
-        async set(key: string, value: any, ttl?: number): Promise<boolean> { return true; }
-        async del(key: string): Promise<boolean> { return true; }
-        async exists(key: string): Promise<boolean> { return false; }
-        getClient() { 
-          return {
-            quit: async () => 'OK',
-            keys: async () => [],
-            del: async () => 0,
-            ping: async () => 'PONG',
-            expire: async () => 1
-          }; 
+      createServiceRedisClient: (serviceName: string, options: any = {}) => {
+        try {
+          const db = options.db || redisManager.SERVICE_DB_MAPPING[serviceName] || 0;
+          logger.info(`Creating Redis client for service ${serviceName} on DB ${db}`);
+          return createRedisClient({
+            ...options,
+            keyPrefix: `${serviceName}:`,
+            db
+          });
+        } catch (error) {
+          logger.error('Error creating Redis client:', { 
+            error: error instanceof Error ? error.message : String(error) 
+          });
+          throw error;
+        }
+      },
+      RedisCache: class RedisCache {
+        private client: any;
+        private prefix: string;
+        
+        constructor(serviceName: string, options: any = {}) {
+          this.prefix = options.keyPrefix || `${serviceName}:cache:`;
+          try {
+            this.client = createRedisClient({
+              ...options,
+              keyPrefix: this.prefix,
+              db: options.db || redisManager.SERVICE_DB_MAPPING[serviceName] || 0
+            });
+          } catch (error) {
+            logger.error('Failed to initialize RedisCache:', { 
+              serviceName,
+              error: error instanceof Error ? error.message : String(error)
+            });
+            throw error;
+          }
+        }
+
+        async get(key: string): Promise<any> {
+          try {
+            const value = await this.client.get(key);
+            return value ? JSON.parse(value) : null;
+          } catch (error) {
+            logger.error('Redis get error:', { 
+              key,
+              error: error instanceof Error ? error.message : String(error)
+            });
+            return null;
+          }
+        }
+
+        async set(key: string, value: any, ttl?: number): Promise<boolean> {
+          try {
+            const serialized = JSON.stringify(value);
+            if (ttl) {
+              await this.client.set(key, serialized, 'EX', ttl);
+            } else {
+              await this.client.set(key, serialized);
+            }
+            return true;
+          } catch (error) {
+            logger.error('Redis set error:', { 
+              key,
+              error: error instanceof Error ? error.message : String(error)
+            });
+            return false;
+          }
+        }
+
+        async del(key: string): Promise<boolean> {
+          try {
+            const result = await this.client.del(key);
+            return result > 0;
+          } catch (error) {
+            logger.error('Redis del error:', { 
+              key,
+              error: error instanceof Error ? error.message : String(error)
+            });
+            return false;
+          }
+        }
+
+        async exists(key: string): Promise<boolean> {
+          try {
+            const result = await this.client.exists(key);
+            return result === 1;
+          } catch (error) {
+            logger.error('Redis exists error:', { 
+              key,
+              error: error instanceof Error ? error.message : String(error)
+            });
+            return false;
+          }
+        }
+
+        getClient() {
+          return this.client;
         }
       },
       SERVICE_DB_MAPPING: {
@@ -78,31 +195,46 @@ try {
       }
     };
   }
-} catch {
-  // Fallback Redis manager
+} catch (error) {
+  logger.error('Error initializing Redis manager, using mock implementation', { 
+    error: error instanceof Error ? error.message : String(error) 
+  });
+  
+  // Fallback to mock implementation
   redisManager = {
     getRedisHealthMetrics: async () => ({
-      uptime: '0',
-      connectedClients: '0', 
+      status: 'disconnected',
+      connectedClients: '0',
       usedMemory: '0',
       totalKeys: 0,
       hitRate: '0%'
     }),
-    createServiceRedisClient: () => null,
+    createServiceRedisClient: () => ({
+      on: () => {},
+      ping: async () => 'PONG',
+      set: async () => 'OK',
+      get: async () => null,
+      del: async () => 1,
+      exists: async () => 0,
+      quit: async () => 'OK',
+      disconnect: async () => {}
+    }),
     RedisCache: class MockRedisCache {
-      constructor(serviceName?: string, options?: any) {}
-      async get(key: string): Promise<any> { return null; }
-      async set(key: string): Promise<boolean> { return true; }
-      async del(key: string): Promise<boolean> { return true; }
-      async exists(key: string): Promise<boolean> { return false; }
+      async get() { return null; }
+      async set() { return true; }
+      async del() { return true; }
+      async exists() { return false; }
       getClient() { 
         return {
-          quit: async () => 'OK',
-          keys: async () => [],
-          del: async () => 0,
+          on: () => {},
           ping: async () => 'PONG',
-          expire: async () => 1
-        }; 
+          set: async () => 'OK',
+          get: async () => null,
+          del: async () => 1,
+          exists: async () => 0,
+          quit: async () => 'OK',
+          disconnect: async () => {}
+        };
       }
     },
     SERVICE_DB_MAPPING: {

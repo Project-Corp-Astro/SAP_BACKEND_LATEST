@@ -154,11 +154,11 @@ router.get('/promo-codes/analytics',
 
 // Promo code routes
 router.get('/promo-codes',
-    requireRemotePermission(
-        'subscription:read',    
-        { application: 'billing',
-            allowSuperadmin: true
-        }) as any as RequestHandler,
+    // requireRemotePermission(
+    //     'subscription:read',    
+    //     { application: 'billing',
+    //         allowSuperadmin: true
+    //     }) as any as RequestHandler,
     adminPromoCodeController.getAllPromoCodes);
 
 router.get('/promo-codes/:id',

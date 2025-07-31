@@ -8,9 +8,9 @@ import { IUser, logger, emailService } from '../utils/sharedModules';
 import { otpCache } from '../utils/redis';
 import { asIUser } from '../utils/type-assertions';
 // JWT secret key - should be stored in environment variables in production
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET || '3e4c77c0f78f1aaabf3b15f8ce5fa4cc9c8040b2f9ff3732c4ef3a07f49128b5b3e6f59b19fce67c622d5c9edb9b0ffacfea64f63164eaa6ac59e8913e2dc962';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '4h';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key';
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'b5d3d8e521f3e3a8496f42b03ef8a79f3a51b82360ff93be33cb4b9e6a1872324d1af96c79344b04ff6765abf9cf9389b0986d1a8aa91e733ae36904bdb25cdd';
 const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
 // Add this import at the top of the file with other imports
 // import RolePermissionModel from '../../../../models/mongodb/RolePermission.model';
@@ -256,6 +256,8 @@ export const refreshToken = async (refreshToken: string): Promise<{ accessToken:
 export const verifyToken = (token: string): TokenPayload => {
   try {
     return jwt.verify(token, JWT_SECRET) as TokenPayload;
+    // Add this right after the imports
+
   } catch (error) {
     throw error;
   }

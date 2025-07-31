@@ -1,4 +1,4 @@
-import UserModel from '../models/User.model';
+import UserModel from '../models/User';
 import RolePermissionModel from '../models/RolePermission.model';
 import { Types } from 'mongoose';
 import redis from '../utils/redis';
@@ -141,15 +141,16 @@ export class PermissionService {
     }
   }
 
-  /**
-   * Get all permissions for a user
-   */
   static async getUserRolePermissions(
     userId: string | Types.ObjectId
   ): Promise<any[]> {
     try {
-      const userObjectId =
-        typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
+      const userObjectId = typeof userId === 'string'
+        ? new Types.ObjectId(userId)
+        : userId;
+  
+      console.log('Fetching permissions for userId:', userId);
+      console.log('Resolved userObjectId:', userObjectId);
   
       const results = await UserModel.aggregate([
         { $match: { _id: userObjectId } },
@@ -158,17 +159,19 @@ export class PermissionService {
             from: 'rolepermissions',
             localField: 'roles',
             foreignField: '_id',
-            as: 'rolePermissions'
-          }
+            as: 'rolePermissions',
+          },
         },
         {
           $project: {
-            rolePermissions: 1
-          }
-        }
+            _id: 0,
+            rolePermissions: 1,
+          },
+        },
       ]).exec();
   
-      // Flatten the rolePermissions array
+      console.log('Aggregation results:', results);
+  
       if (results.length > 0 && Array.isArray(results[0].rolePermissions)) {
         return results[0].rolePermissions;
       }
@@ -179,6 +182,7 @@ export class PermissionService {
       return [];
     }
   }
+  
   
 
   /**

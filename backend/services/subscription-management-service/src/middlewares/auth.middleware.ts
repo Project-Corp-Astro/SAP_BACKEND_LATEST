@@ -79,6 +79,8 @@ export const authMiddleware = (
 
   // Verify token
   try {
+    console.log("token",token )
+    console.log("Jwt secret",JWT_SECRET)
     const payload = jwt.verify(token, JWT_SECRET) as CustomJwtPayload;
 
     // Attach user info to request

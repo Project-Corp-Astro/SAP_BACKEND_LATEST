@@ -1,6 +1,6 @@
 import * as bcrypt from 'bcrypt';
 import userServiceLogger from '../utils/logger';
-import UserModel, { IUserDocument } from '../models/User.model';
+import UserModel from '../models/User';
 import UserActivity, { ActivityType } from '../models/UserActivity';
 import UserDevice from '../models/UserDevice';
 import { trackDatabaseOperation } from '../utils/performance';
@@ -13,14 +13,6 @@ import {
   ActivityPaginationResult
 } from '../interfaces/shared-types';
 
-// Use the model from User.model.ts instead of User.ts
-const User = UserModel;
-type UserDocument = IUserDocument;
-
-// Type adapter function to convert mongoose documents to our interface
-const adaptUserDocument = (doc: any): UserDocument | null => {
-  return doc as UserDocument | null;
-};
 import redis from '../utils/redis';
 
 interface FormattedUser {
@@ -68,77 +60,6 @@ class UserService {
       }
     });
   }
-
-  // async createUser(userData: Partial<UserDocument>): Promise<UserDocument> {
-  //   try {
-  //     const cacheKey = `user:check:${userData.email}`;
-  //     try {
-  //       const cachedCheck = await redisUtils.get(cacheKey);
-  //       redisUtils.stats.defaultCache[cachedCheck ? 'hits' : 'misses']++;
-  //       if (cachedCheck?.email === userData.email) {
-  //         throw new Error('Email already in use');
-  //       }
-  //     } catch (error) {
-  //       redisUtils.stats.defaultCache.misses++;
-  //       logger.warn(`Error checking cache for email ${userData.email}: ${error instanceof Error ? error.message : String(error)}`);
-  //     }
-
-  //     const existingUser = await trackDatabaseOperation<UserDocument | null>('findUserByEmail', async () =>
-  //       User.findOne({ email: userData.email })
-  //     );
-  //     if (existingUser) {
-  //       try {
-  //         await redisUtils.set(cacheKey, { email: existingUser.email }, 300);
-  //       } catch (cacheError) {
-  //         logger.warn(`Error caching email check: ${cacheError instanceof Error ? cacheError.message : String(cacheError)}`);
-  //       }
-  //       throw new Error('Email already in use');
-  //     }
-
-  //     const user = new User({
-  //       ...userData,
-  //       role: userData.role ?? UserRole.USER,
-  //       password: userData.password ? await bcrypt.hash(userData.password, 10) : await bcrypt.hash('Temp123!', 10),
-  //       preferences: userData.preferences ?? {
-  //         theme: 'system',
-  //         notifications: { email: true, push: true }
-  //       },
-  //       securityPreferences: userData.securityPreferences ?? {
-  //         twoFactorEnabled: false,
-  //         loginNotifications: true,
-  //         activityAlerts: true
-  //       },
-  //       isActive: true,
-  //       isMfaEnabled: false
-  //     });
-
-  //     await trackDatabaseOperation('saveUser', async () => user.save());
-
-  //     // Invalidate caches
-  //     try {
-  //       const listKeys = await userCache.getClient().keys('users:list:*');
-  //       if (listKeys.length > 0) {
-  //         await userCache.getClient().del(...listKeys);
-  //         logger.info(`Cleared ${listKeys.length} user list cache entries`);
-  //       }
-  //       await redisUtils.del(cacheKey);
-  //     } catch (cacheError) {
-  //       logger.warn(`Error invalidating caches: ${cacheError instanceof Error ? cacheError.message : String(cacheError)}`);
-  //     }
-
-  //     // Cache the new user
-  //     try {
-  //       await redisUtils.cacheUser(user._id.toString(), user, 3600);
-  //     } catch (cacheError) {
-  //       logger.warn(`Error caching user ${user._id}: ${cacheError instanceof Error ? cacheError.message : String(cacheError)}`);
-  //     }
-
-  //     return user;
-  //   } catch (error) {
-  //     logger.error('Error creating user:', { error: (error as Error).message });
-  //     throw error;
-  //   }
-  // }
 
   async clearUsersCache(): Promise<void> {
     try {
@@ -198,15 +119,14 @@ class UserService {
       }
 
       const totalUsers = await trackDatabaseOperation<number>('countUsers', async () =>
-        User.countDocuments(query).exec()
+        UserModel.countDocuments(query).exec()
       );
 
       const skip = (page - 1) * limit;
       const sort: Record<string, 1 | -1> = { [sortBy]: sortOrder === 'asc' ? 1 : -1 };
 
       const users = await trackDatabaseOperation<any[]>('findUsers', async () =>
-        User.find(query)
-          
+        UserModel.find(query)
           .populate({
             path: 'roles',
             model: RolePermissionModel.modelName,
@@ -218,17 +138,18 @@ class UserService {
           .exec()
       );
 
-      // const formattedUsers = users.map(user => ({
-      //   _id: user._id,
-      //   email: user.email,
-      //   firstName: user.firstName,
-      //   lastName: user.lastName,
-      //   isActive: user.isActive,
-      //   roles: user.roles?.map((r: any) => r.role) ?? [],
-      //   permissions: user.roles?.flatMap((r: any) => r.permissions) ?? []
-      // }));
+      const formattedUsers = users.map(user => ({
+        _id: user._id.toString(),
+        email: user.email,
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        isActive: user.isActive,
+        roles: user.roles?.map((r: any) => r.role) ?? [],
+        permissions: user.roles?.flatMap((r: any) => r.permissions || []) ?? []
+      }));
+
       const result: UserPaginationResult = {
-        users, // full Mongoose docs with all fields, including roles[]
+        users: formattedUsers,
         totalUsers,
         totalPages: Math.ceil(totalUsers / limit),
         currentPage: page,
@@ -259,7 +180,7 @@ class UserService {
 
       logger.info('Fetching user from MongoDB');
       const user = await trackDatabaseOperation<any | null>('findUserById', async () =>
-        User.findById(userId)
+        UserModel.findById(userId)
           .select('-password')
           .populate({
             path: 'roles',
@@ -273,7 +194,22 @@ class UserService {
         throw new Error('User not found');
       }
 
-      const formattedUser = user;
+      // Format the user similar to FormattedUser for consistency
+      const formattedUser = {
+        _id: user._id.toString(),
+        email: user.email,
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        isActive: user.isActive,
+        roles: user.roles?.map((r: any) => r.role) ?? [],
+        permissions: user.roles?.flatMap((r: any) => r.permissions || []) ?? [],
+        // Add other fields if needed
+        phoneNumber: user.phoneNumber,
+        profileImage: user.profileImage,
+        userAddress: user.userAddress,
+        preferences: user.preferences,
+        securityPreferences: user.securityPreferences
+      };
 
       try {
         await redisUtils.cacheUser(userId, formattedUser, 3600);
@@ -289,7 +225,7 @@ class UserService {
     }
   }
 
-  async updateUser(userId: string, updateData: Partial<UserDocument>): Promise<UserDocument> {
+  async updateUser(userId: string, updateData: Partial<any>): Promise<any> {
     try {
       const cacheKey = `user:check:${updateData.email}`;
       if (updateData.email) {
@@ -304,8 +240,8 @@ class UserService {
           logger.warn(`Error checking cache for email ${updateData.email}: ${error instanceof Error ? error.message : String(error)}`);
         }
 
-        const existing = await trackDatabaseOperation<UserDocument | null>('findUserByEmail', async () =>
-          User.findOne({ email: updateData.email, _id: { $ne: userId } }).exec() as Promise<UserDocument | null>
+        const existing = await trackDatabaseOperation<any | null>('findUserByEmail', async () =>
+          UserModel.findOne({ email: updateData.email, _id: { $ne: userId } }).exec()
         );
         if (existing) {
           try {
@@ -319,14 +255,14 @@ class UserService {
 
       const updateFields: Record<string, any> = {};
       Object.keys(updateData).forEach(key => {
-        if (updateData[key as keyof Partial<UserDocument>] !== undefined) {
-          updateFields[key] = updateData[key as keyof Partial<UserDocument>];
+        if (updateData[key] !== undefined) {
+          updateFields[key] = updateData[key];
         }
       });
- 
+
       if ((updateData.firstName || updateData.lastName) && !updateData.username) {
-        const currentUser = await trackDatabaseOperation<UserDocument | null>('findUserById', async () =>
-          User.findById(userId).exec()
+        const currentUser = await trackDatabaseOperation<any | null>('findUserById', async () =>
+          UserModel.findById(userId).exec()
         );
         if (!currentUser) throw new Error('User not found');
         const firstName = updateData.firstName || currentUser.firstName;
@@ -334,8 +270,8 @@ class UserService {
         updateFields.username = `${firstName} ${lastName}`.trim();
       }
 
-      const user = await trackDatabaseOperation<UserDocument | null>('updateUser', async () =>
-        User.findByIdAndUpdate(userId, { $set: updateFields }, { new: true, runValidators: true }).exec()
+      const user = await trackDatabaseOperation<any | null>('updateUser', async () =>
+        UserModel.findByIdAndUpdate(userId, { $set: updateFields }, { new: true, runValidators: true }).exec()
       );
       if (!user) throw new Error('User not found');
 
@@ -366,11 +302,10 @@ class UserService {
     }
   }
 
-
-  async deleteUser(userId: string): Promise<UserDocument> {
+  async deleteUser(userId: string): Promise<any> {
     try {
-      const user = await trackDatabaseOperation<UserDocument | null>('deleteUser', async () =>
-        User.findByIdAndDelete(userId).exec()
+      const user = await trackDatabaseOperation<any | null>('deleteUser', async () =>
+        UserModel.findByIdAndDelete(userId).exec()
       );
       if (!user) throw new Error('User not found');
 
@@ -395,10 +330,10 @@ class UserService {
     }
   }
 
-  async updateUserStatus(userId: string, isActive: boolean): Promise<UserDocument> {
+  async updateUserStatus(userId: string, isActive: boolean): Promise<any> {
     try {
-      const user = await trackDatabaseOperation<UserDocument | null>('updateUserStatus', async () =>
-        User.findByIdAndUpdate(userId, { $set: { isActive } }, { new: true }).exec()
+      const user = await trackDatabaseOperation<any | null>('updateUserStatus', async () =>
+        UserModel.findByIdAndUpdate(userId, { $set: { isActive } }, { new: true }).exec()
       );
       if (!user) throw new Error('User not found');
 
@@ -428,22 +363,22 @@ class UserService {
     }
   }
 
-  async updateProfile(userId: string, profileData: Partial<UserDocument>): Promise<UserDocument> {
+  async updateProfile(userId: string, profileData: Partial<any>): Promise<any> {
     try {
       await this.getUserById(userId);
       const allowed: any = {
         firstName: profileData.firstName,
         lastName: profileData.lastName,
         phoneNumber: profileData.phoneNumber,
-        address: profileData.address,
+        userAddress: profileData.userAddress,
         profileImage: profileData.profileImage,
         preferences: profileData.preferences
       };
     
       Object.keys(allowed).forEach(k => allowed[k] === undefined && delete allowed[k]);
 
-      const updatedUser = await trackDatabaseOperation<UserDocument | null>('updateProfile', async () =>
-        User.findByIdAndUpdate(userId, { $set: allowed }, { new: true }).exec()
+      const updatedUser = await trackDatabaseOperation<any | null>('updateProfile', async () =>
+        UserModel.findByIdAndUpdate(userId, { $set: allowed }, { new: true }).exec()
       );
       if (!updatedUser) throw new Error('User not found');
 
@@ -477,16 +412,16 @@ class UserService {
 
   async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<boolean> {
     try {
-      const user = await trackDatabaseOperation<UserDocument | null>('findUserWithPassword', async () =>
-        User.findById(userId).select('+password').exec()
+      const user = await trackDatabaseOperation<any | null>('findUserWithPassword', async () =>
+        UserModel.findById(userId).select('+password').exec()
       );
       if (!user) throw new Error('User not found');
 
-      const isMatch = await bcrypt.compare(currentPassword, user.password!);
+      const isMatch = await bcrypt.compare(currentPassword, user.password as string);
       if (!isMatch) throw new Error('Current password is incorrect');
 
-      const updatedUser = await trackDatabaseOperation<UserDocument | null>('updatePassword', async () => {
-        user.password = await bcrypt.hash(newPassword, 10);
+      user.password = await bcrypt.hash(newPassword, 10);
+      const updatedUser = await trackDatabaseOperation<any | null>('updatePassword', async () => {
         await user.save();
         return user;
       });
@@ -520,11 +455,11 @@ class UserService {
     }
   }
 
-  async updateSecurityPreferences(userId: string, securityPreferences: SecurityPreferences): Promise<UserDocument> {
+  async updateSecurityPreferences(userId: string, securityPreferences: SecurityPreferences): Promise<any> {
     try {
       await this.getUserById(userId);
-      const updatedUser = await trackDatabaseOperation<UserDocument | null>('updateSecurityPreferences', async () =>
-        User.findByIdAndUpdate(userId, { $set: { securityPreferences } }, { new: true }).exec()
+      const updatedUser = await trackDatabaseOperation<any | null>('updateSecurityPreferences', async () =>
+        UserModel.findByIdAndUpdate(userId, { $set: { securityPreferences } }, { new: true }).exec()
       );
       if (!updatedUser) throw new Error('User not found');
 

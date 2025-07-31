@@ -43,31 +43,32 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Parse the body for all proxy requests
-app.use((req, res, next) => {
-  if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
-    let data = '';
-    req.on('data', chunk => {
-      data += chunk;
-    });
-    req.on('end', () => {
-      try {
-        if (data) {
-          req.body = JSON.parse(data);
-        }
-        next();
-      } catch (e) {
-        next();
-      }
-    });
-  } else {
-    next();
-  }
-});
+// app.use((req, res, next) => {
+//   if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
+//     let data = '';
+//     req.on('data', chunk => {
+//       data += chunk;
+//     });
+//     req.on('end', () => {
+//       try {
+//         if (data) {
+//           req.body = JSON.parse(data);
+//         }
+//         next();
+//       } catch (e) {
+//         next();
+//       }
+//     });
+//   } else {
+//     next();
+//   }
+// });
 
 // ✅ Add request tracking logger
 app.use((req: Request, res: Response, next: NextFunction) => {
   logger.info(`🔍 ${req.method} ${req.path} from ${req.ip}`);
   logger.info(`📋 Headers: Origin=${req.headers.origin || 'none'}, Content-Type=${req.headers['content-type'] || 'none'}`);
+  logger.info(`➡️ Body: ${JSON.stringify(req.body)}`);
   next();
 });
 

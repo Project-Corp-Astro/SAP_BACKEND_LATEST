@@ -9,7 +9,6 @@ import logger, { requestLogger, errorLogger } from './utils/logger';
 import { performanceMiddleware } from './utils/performance';
 import redisUtils from './utils/redis';
 import roleRoutes from './routes/role.routes';
-import { authMiddleware } from './middlewares/auth.middleware';
 
 // Initialize Express app
 const app = express();
@@ -27,7 +26,7 @@ app.use(requestLogger as any);
 
 
 // MongoDB Connection
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/sap-users';
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/sap-db';
 mongoose.set('strictQuery', false);
 
 const mongooseOptions: mongoose.ConnectOptions = {

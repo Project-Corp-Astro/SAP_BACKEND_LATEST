@@ -26,7 +26,7 @@ const getRedisConfig = () => {
   // If REDIS_URL is available, use it directly
   if (process.env.REDIS_URL) {
     logger.info('Using REDIS_URL for configuration:', { redisUrl: process.env.REDIS_URL });
-    return process.env.REDIS_URL; // Return URL string directly for ioredis
+    return process.env.REDIS_URL;
   }
   
   // Otherwise use config with proper fallbacks
@@ -38,50 +38,166 @@ const getRedisConfig = () => {
     host,
     port,
     password: password || undefined,
-    db: SERVICE_DB_MAPPING[SERVICE_NAME] || DB_NUMBER
+    db: SERVICE_DB_MAPPING[SERVICE_NAME] || DB_NUMBER,
+    retryStrategy: (times: number) => {
+      const delay = Math.min(times * 100, 5000);
+      logger.warn(`Redis reconnecting in ${delay}ms`);
+      return delay;
+    },
+    reconnectOnError: (err: Error) => {
+      logger.error('Redis connection error:', { error: err.message });
+      return true;
+    }
   };
 };
 
-// Try to create Redis client using redisManager, fallback to direct creation
-let redisClient: IORedis;
-try {
-  redisClient = createServiceRedisClient(SERVICE_NAME, getRedisConfig());
-  if (!redisClient) {
-    throw new Error('createServiceRedisClient returned null');
-  }
-} catch (error) {
-  logger.error('Failed to create Redis client via redisManager, creating directly:', { error: error instanceof Error ? error.message : String(error) });
-  // Create Redis client directly using ioredis
-  const redisConfig = getRedisConfig();
+// Initialize Redis client as null initially
+let redisClient: IORedis | null = null;
+
+// Function to safely attach event listeners
+function attachRedisEventListeners(client: IORedis) {
+  if (!client) return;
   
-  // Log the configuration for debugging
-  logger.info('Creating Redis client with config:', { 
-    config: redisConfig, 
-    redisUrl: process.env.REDIS_URL ? 'set' : 'not set',
-    configType: typeof redisConfig
+  client.on('connect', () => {
+    logger.info('Redis client connected');
   });
+
+  client.on('ready', () => {
+    logger.info('Redis client ready');
+  });
+
+  client.on('error', (error) => {
+    logger.error('Redis client error:', { error: error.message });
+  });
+
+  client.on('reconnecting', () => {
+    logger.warn('Redis client reconnecting...');
+  });
+
+  client.on('end', () => {
+    logger.warn('Redis client connection closed');
+  });
+}
+
+// Create a factory function for Redis clients
+function createRedisClient() {
+  const config = getRedisConfig();
+  let client: IORedis;
   
-  // Handle both URL string and object configuration
-  if (typeof redisConfig === 'string') {
-    // URL string - add database selection
-    const url = new URL(redisConfig);
-    redisClient = new Redis(redisConfig, {
-      db: SERVICE_DB_MAPPING[SERVICE_NAME] || DB_NUMBER
+  try {
+    if (typeof config === 'string') {
+      logger.info('Creating direct Redis client with URL');
+      client = new Redis(config, {
+        retryStrategy: (times) => {
+          const delay = Math.min(times * 100, 5000);
+          logger.warn(`Redis reconnecting in ${delay}ms`);
+          return delay;
+        },
+        maxRetriesPerRequest: null,
+        enableReadyCheck: true,
+        connectTimeout: 10000,
+      });
+    } else {
+      logger.info('Creating direct Redis client with config', {
+        host: config.host,
+        port: config.port,
+        db: config.db || SERVICE_DB_MAPPING[SERVICE_NAME] || DB_NUMBER
+      });
+      
+      client = new Redis({
+        host: config.host || '127.0.0.1',
+        port: config.port || 6379,
+        password: config.password,
+        db: config.db || SERVICE_DB_MAPPING[SERVICE_NAME] || DB_NUMBER,
+        retryStrategy: (times) => {
+          const delay = Math.min(times * 100, 5000);
+          logger.warn(`Redis reconnecting in ${delay}ms`);
+          return delay;
+        },
+        maxRetriesPerRequest: null,
+        enableReadyCheck: true,
+        connectTimeout: 10000,
+      });
+    }
+
+    // Attach event listeners
+    attachRedisEventListeners(client);
+    
+    return client;
+  } catch (error) {
+    logger.error('Failed to create Redis client:', {
+      error: error instanceof Error ? error.message : String(error)
     });
-  } else {
-    // Object configuration
-    redisClient = new Redis(redisConfig);
+    throw error;
   }
 }
 
-// Connection event handlers
-redisClient.on('error', (error) => logger.error('Redis client error:', { error: error.message }));
-redisClient.on('connect', () => logger.info('Redis client connected successfully'));
-redisClient.on('end', () => logger.error('Redis client disconnected'));
-redisClient.on('reconnecting', () => logger.info('Redis client reconnecting...'));
+async function initializeRedisClient(): Promise<IORedis> {
+  const client = createRedisClient();
+  
+  try {
+    // Test the connection
+    await client.ping();
+    logger.info('Successfully connected to Redis');
+    
+    // Set the global redisClient only after successful connection
+    redisClient = client;
+    return client;
+  } catch (error) {
+    logger.error('Failed to initialize Redis client:', {
+      error: error instanceof Error ? error.message : String(error)
+    });
+    // Close the client if it was created but failed to connect
+    await client.quit().catch(() => {});
+    throw error;
+  }
+}
 
-// Log Redis database information
-logger.info(`Subscription service using Redis database ${SERVICE_DB_MAPPING[SERVICE_NAME] || DB_NUMBER}`);
+// Initialize Redis client and set up event handlers
+let redisInitialization: Promise<void> | null = null;
+
+async function initializeRedisWithRetry(): Promise<void> {
+  if (redisInitialization) {
+    return redisInitialization;
+  }
+
+  redisInitialization = (async () => {
+    const maxRetries = 3;
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        logger.info(`Attempting to connect to Redis (attempt ${attempt}/${maxRetries})`);
+        await initializeRedisClient();
+        return;
+      } catch (error) {
+        lastError = error as Error;
+        const delay = Math.min(1000 * attempt, 5000);
+        logger.warn(`Redis connection attempt ${attempt} failed, retrying in ${delay}ms`, {
+          error: lastError.message
+        });
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+
+    logger.error('All Redis connection attempts failed, proceeding without Redis', {
+      error: lastError?.message || 'Unknown error'
+    });
+  })();
+
+  return redisInitialization;
+}
+
+// Export a function to get the Redis client
+export async function getRedisClient(): Promise<IORedis> {
+  if (!redisClient) {
+    await initializeRedisWithRetry();
+    if (!redisClient) {
+      throw new Error('Redis client could not be initialized');
+    }
+  }
+  return redisClient;
+}
 
 /**
  * Enhanced Redis utilities for the Subscription Service
@@ -128,22 +244,27 @@ const redisUtils: RedisUtils = {
   },
 
   getStats() {
+    const calculateHitRate = (hits: number, misses: number) => {
+      const total = hits + misses;
+      return total > 0 ? hits / total : 0;
+    };
+
     return {
       defaultCache: {
         ...this.stats.defaultCache,
-        hitRate: this.stats.defaultCache.hits / (this.stats.defaultCache.hits + this.stats.defaultCache.misses) || 0
+        hitRate: calculateHitRate(this.stats.defaultCache.hits, this.stats.defaultCache.misses)
       },
       planCache: {
         ...this.stats.planCache,
-        hitRate: this.stats.planCache.hits / (this.stats.planCache.hits + this.stats.planCache.misses) || 0
+        hitRate: calculateHitRate(this.stats.planCache.hits, this.stats.planCache.misses)
       },
       userSubsCache: {
         ...this.stats.userSubsCache,
-        hitRate: this.stats.userSubsCache.hits / (this.stats.userSubsCache.hits + this.stats.userSubsCache.misses) || 0
+        hitRate: calculateHitRate(this.stats.userSubsCache.hits, this.stats.userSubsCache.misses)
       },
       promoCache: {
         ...this.stats.promoCache,
-        hitRate: this.stats.promoCache.hits / (this.stats.promoCache.hits + this.stats.promoCache.misses) || 0
+        hitRate: calculateHitRate(this.stats.promoCache.hits, this.stats.promoCache.misses)
       }
     };
   },
@@ -154,13 +275,12 @@ const redisUtils: RedisUtils = {
       return success ? 'OK' : 'ERROR';
     } catch (error: unknown) {
       try {
+        const client = await getRedisClient();
         const stringValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
         if (expiryInSeconds) {
-          await redisClient.set(key, stringValue, 'EX', expiryInSeconds);
-        } else {
-          await redisClient.set(key, stringValue);
+          return await client.set(key, stringValue, 'EX', expiryInSeconds);
         }
-        return 'OK';
+        return await client.set(key, stringValue);
       } catch (fallbackError: unknown) {
         logger.error(`Error setting Redis key ${key}:`, {
           primaryError: error instanceof Error ? error.message : String(error),
@@ -179,12 +299,13 @@ const redisUtils: RedisUtils = {
     } catch (error: unknown) {
       this.stats.defaultCache.misses++;
       try {
-        const value = await redisClient.get(key);
+        const client = await getRedisClient();
+        const value = await client.get(key);
         if (!value) return null;
         try {
           return JSON.parse(value) as T;
         } catch {
-          return value as T;
+          return value as unknown as T;
         }
       } catch (fallbackError: unknown) {
         logger.error(`Error getting Redis key ${key}:`, {
@@ -202,7 +323,8 @@ const redisUtils: RedisUtils = {
       return success ? 1 : 0;
     } catch (error: unknown) {
       try {
-        return await redisClient.del(key);
+        const client = await getRedisClient();
+        return await client.del(key);
       } catch (fallbackError: unknown) {
         logger.error(`Error deleting Redis key ${key}:`, {
           primaryError: error instanceof Error ? error.message : String(error),
@@ -219,7 +341,8 @@ const redisUtils: RedisUtils = {
       return exists ? 1 : 0;
     } catch (error: unknown) {
       try {
-        return await redisClient.exists(key);
+        const client = await getRedisClient();
+        return await client.exists(key);
       } catch (fallbackError: unknown) {
         logger.error(`Error checking if Redis key ${key} exists:`, {
           primaryError: error instanceof Error ? error.message : String(error),
@@ -236,7 +359,8 @@ const redisUtils: RedisUtils = {
       return await client.expire(key, seconds);
     } catch (error: unknown) {
       try {
-        return await redisClient.expire(key, seconds);
+        const client = await getRedisClient();
+        return await client.expire(key, seconds);
       } catch (fallbackError: unknown) {
         logger.error(`Error setting expiry on Redis key ${key}:`, {
           primaryError: error instanceof Error ? error.message : String(error),
@@ -248,43 +372,28 @@ const redisUtils: RedisUtils = {
   },
 
   async close(): Promise<void> {
-    interface RedisCloseError {
-      client: string;
-      error: string;
-    }
-    const errors: RedisCloseError[] = [];
-    const closePromises: Promise<string>[] = [];
+    const errors: Array<{ client: string; error: string }> = [];
+    const closePromises: Promise<unknown>[] = [];
 
-    closePromises.push(
-      defaultCache.getClient().quit().catch((error: any) => {
-        errors.push({ client: 'default', error: (error as Error).message });
-        return '';
-      })
-    );
-    closePromises.push(
-      planCache.getClient().quit().catch((error: any) => {
-        errors.push({ client: 'plan', error: (error as Error).message });
-        return '';
-      })
-    );
-    closePromises.push(
-      userSubsCache.getClient().quit().catch((error: any) => {
-        errors.push({ client: 'user-subs', error: (error as Error).message });
-        return '';
-      })
-    );
-    closePromises.push(
-      promoCache.getClient().quit().catch((error: any) => {
-        errors.push({ client: 'promo', error: (error as Error).message });
-        return '';
-      })
-    );
-    closePromises.push(
-      redisClient.quit().catch((error: any) => {
-        errors.push({ client: 'legacy', error: (error as Error).message });
-        return '';
-      })
-    );
+    const closeWithErrorHandling = async (client: any, name: string) => {
+      try {
+        await client.quit();
+      } catch (error) {
+        errors.push({ 
+          client: name, 
+          error: error instanceof Error ? error.message : String(error) 
+        });
+      }
+    };
+
+    closePromises.push(closeWithErrorHandling(defaultCache.getClient(), 'default'));
+    closePromises.push(closeWithErrorHandling(planCache.getClient(), 'plan'));
+    closePromises.push(closeWithErrorHandling(userSubsCache.getClient(), 'user-subs'));
+    closePromises.push(closeWithErrorHandling(promoCache.getClient(), 'promo'));
+
+    if (redisClient) {
+      closePromises.push(closeWithErrorHandling(redisClient, 'legacy'));
+    }
 
     await Promise.all(closePromises);
 
@@ -301,7 +410,8 @@ const redisUtils: RedisUtils = {
       return response === 'PONG';
     } catch (error: unknown) {
       try {
-        const response = await redisClient.ping();
+        const client = await getRedisClient();
+        const response = await client.ping();
         return response === 'PONG';
       } catch (fallbackError: unknown) {
         logger.error('Error pinging Redis:', {
@@ -317,7 +427,9 @@ const redisUtils: RedisUtils = {
     try {
       return await planCache.set(`plan:${planId}`, planData, ttlSeconds);
     } catch (error: unknown) {
-      logger.error(`Error caching plan ${planId}:`, { error: error instanceof Error ? error.message : String(error) });
+      logger.error(`Error caching plan ${planId}:`, { 
+        error: error instanceof Error ? error.message : String(error) 
+      });
       return false;
     }
   },
@@ -329,7 +441,9 @@ const redisUtils: RedisUtils = {
       return value;
     } catch (error: unknown) {
       this.stats.planCache.misses++;
-      logger.error(`Error getting cached plan ${planId}:`, { error: error instanceof Error ? error.message : String(error) });
+      logger.error(`Error getting cached plan ${planId}:`, { 
+        error: error instanceof Error ? error.message : String(error) 
+      });
       return null;
     }
   },
@@ -338,7 +452,9 @@ const redisUtils: RedisUtils = {
     try {
       return await userSubsCache.set(`user:${userId}:subscriptions`, subscriptions, ttlSeconds);
     } catch (error: unknown) {
-      logger.error(`Error caching subscriptions for user ${userId}:`, { error: error instanceof Error ? error.message : String(error) });
+      logger.error(`Error caching subscriptions for user ${userId}:`, { 
+        error: error instanceof Error ? error.message : String(error) 
+      });
       return false;
     }
   },
@@ -350,7 +466,9 @@ const redisUtils: RedisUtils = {
       return value || [];
     } catch (error: unknown) {
       this.stats.userSubsCache.misses++;
-      logger.error(`Error getting cached subscriptions for user ${userId}:`, { error: error instanceof Error ? error.message : String(error) });
+      logger.error(`Error getting cached subscriptions for user ${userId}:`, { 
+        error: error instanceof Error ? error.message : String(error) 
+      });
       return [];
     }
   },
@@ -359,7 +477,9 @@ const redisUtils: RedisUtils = {
     try {
       return await promoCache.set(`promo:${promoId}`, promoData, ttlSeconds);
     } catch (error: unknown) {
-      logger.error(`Error caching promo ${promoId}:`, { error: error instanceof Error ? error.message : String(error) });
+      logger.error(`Error caching promo ${promoId}:`, { 
+        error: error instanceof Error ? error.message : String(error) 
+      });
       return false;
     }
   },
@@ -371,7 +491,9 @@ const redisUtils: RedisUtils = {
       return value;
     } catch (error: unknown) {
       this.stats.promoCache.misses++;
-      logger.error(`Error getting cached promo ${promoId}:`, { error: error instanceof Error ? error.message : String(error) });
+      logger.error(`Error getting cached promo ${promoId}:`, { 
+        error: error instanceof Error ? error.message : String(error) 
+      });
       return null;
     }
   },
@@ -383,7 +505,9 @@ const redisUtils: RedisUtils = {
       if (keys.length === 0) return 0;
       return await userSubsCache.getClient().del(...keys);
     } catch (error: unknown) {
-      logger.error(`Failed to invalidate cache for user ${userId}:`, { error: error instanceof Error ? error.message : String(error) });
+      logger.error(`Failed to invalidate cache for user ${userId}:`, { 
+        error: error instanceof Error ? error.message : String(error) 
+      });
       return 0;
     }
   }
@@ -391,3 +515,9 @@ const redisUtils: RedisUtils = {
 
 export { redisClient, redisUtils, defaultCache, planCache, userSubsCache, promoCache };
 export default redisUtils;
+
+// Initialize Redis when this module is loaded
+initializeRedisWithRetry().catch(err => {
+  logger.error('Unhandled error during Redis initialization', {
+    error: err instanceof Error ? err.message : String(err)
+  });});

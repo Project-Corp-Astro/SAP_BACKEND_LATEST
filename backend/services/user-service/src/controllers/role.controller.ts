@@ -3,7 +3,7 @@ import { Types } from 'mongoose';
 import RolePermissionModel from '../models/RolePermission.model';
 import { PermissionService } from '../services/PermissionService';
 // Use local User model instead of problematic import
-import UserModel from '../models/User.model';
+import UserModel from '../models/User';
 
 // Use local error classes instead of importing from problematic paths
 class BadRequestError extends Error {
@@ -283,7 +283,8 @@ export const getUserRolePermissions = async (req: Request, res: Response) => {
     }
 
     const rolePermissions = await PermissionService.getUserRolePermissions(userId);
-
+    console.log(rolePermissions)
+ 
     return res.status(200).json({ success: true, data: rolePermissions });
   } catch (error) {
     console.error('Error fetching user role permissions:', error);

@@ -1,8 +1,7 @@
 import mongoose, { Schema, model } from 'mongoose';
 import { UserDocument, ThemePreference, AppAccess } from '../interfaces/shared-types';
-import { UserRole /*, VALID_PERMISSIONS */ } from '../interfaces/local-shared-types';
-// Temporary hardcoded permissions to bypass VALID_PERMISSIONS undefined error
-// TODO: Revert to `enum: VALID_PERMISSIONS.map(p => p.id)` after fixing import
+
+
 
 
 // Sub-schemas
